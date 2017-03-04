@@ -239,50 +239,39 @@ void DoThreadMagic(HANDLE hThread)
     WaitForSingleObject(hThread, INFINITE);
 }
 
-LPVOID NormalDllInjection(HANDLE hProcess, const WCHAR * dllPath)
+HMODULE InjectDllNormal(HANDLE hProcess, const wchar_t *dll_path)
 {
-    SIZE_T memorySize = (wcslen(dllPath) + 1) * sizeof(WCHAR);
+    auto mem_size = (wcslen(dll_path) + 1) * sizeof(WCHAR);
 
-    LPVOID remoteMemory = VirtualAllocEx(hProcess, NULL, memorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    scl::VirtualMemoryHandle remote_mem(hProcess, VirtualAllocEx(hProcess, nullptr, mem_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+    if (!remote_mem.get())
+    {
+        g_log.LogError(L"Hook-Inject-Normal: Failed to allocate remote memory: %s", scl::FormatMessageW(GetLastError()).c_str());
+        return nullptr;
+    }
+
+    if (!WriteProcessMemory(hProcess, remote_mem.get(), dll_path, mem_size, nullptr))
+    {
+        g_log.LogError(L"Hook-Inject-Normal: Failed to write to remote process: %s", scl::FormatMessageW(GetLastError()).c_str());
+        return nullptr;
+    }
+
+    // TODO: Calculate remote LoadLibraryW address?
+
+    scl::Handle hThread(CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)LoadLibraryW, remote_mem.get(), CREATE_SUSPENDED, nullptr));
+    if (!hThread.get())
+    {
+        g_log.LogError(L"Hook-Inject-Normal: Failed to execute remote LoadLibraryW: %s", scl::FormatMessageW(GetLastError()).c_str());
+        return nullptr;
+    }
+
+    DoThreadMagic(hThread.get());
+
+    // TODO: On x64 LoadLibraryW can return address bigger than DWORD can hold.
     DWORD hModule = 0;
+    GetExitCodeThread(hThread.get(), &hModule);
 
-    if (!remoteMemory)
-    {
-        g_log.LogInfo(L"DLL INJECTION: VirtualAllocEx failed!");
-        return 0;
-    }
-
-    if (WriteProcessMemory(hProcess, remoteMemory, dllPath, memorySize, 0))
-    {
-        HANDLE hThread = CreateRemoteThread(hProcess, NULL, NULL, (LPTHREAD_START_ROUTINE)LoadLibraryW, remoteMemory, CREATE_SUSPENDED, 0);
-        if (hThread)
-        {
-            DoThreadMagic(hThread);
-
-            GetExitCodeThread(hThread, &hModule);
-
-            if (!hModule)
-            {
-                g_log.LogInfo(L"DLL INJECTION: Failed load library!");
-            }
-
-            CloseHandle(hThread);
-        }
-        else
-        {
-            g_log.LogInfo(L"DLL INJECTION: Failed to start thread %d!", GetLastError());
-        }
-    }
-    else
-    {
-        g_log.LogInfo(L"DLL INJECTION: Failed WriteProcessMemory!");
-    }
-
-    VirtualFreeEx(hProcess, remoteMemory, 0, MEM_RELEASE);
-
-
-
-    return (LPVOID)hModule;
+    return (HMODULE)hModule;
 }
 
 DWORD_PTR GetAddressOfEntryPoint(BYTE * dllMemory)
@@ -354,7 +343,7 @@ void injectDll(DWORD targetPid, const WCHAR * dllPath)
         else if (g_settings.opts().dllNormal)
         {
             g_log.LogInfo(L"Starting Normal DLL Injection!");
-            remoteImage = NormalDllInjection(hProcess, dllPath);
+            remoteImage = InjectDllNormal(hProcess, dllPath);
         }
         else
         {

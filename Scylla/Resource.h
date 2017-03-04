@@ -22,4 +22,24 @@ namespace scl
     private:
         HANDLE handle_;
     };
+
+    class VirtualMemoryHandle
+    {
+    public:
+        explicit VirtualMemoryHandle(HANDLE hProcess, void *address) : process_(hProcess), address_(address) {}
+        ~VirtualMemoryHandle()
+        {
+            if (process_ && address_)
+                VirtualFree(process_, 0, MEM_RELEASE);
+        }
+
+        VirtualMemoryHandle(const VirtualMemoryHandle &other) = delete;
+        VirtualMemoryHandle &operator=(const VirtualMemoryHandle &other) = delete;
+
+        void *get() const { return address_; }
+
+    private:
+        HANDLE process_;
+        void *address_;
+    };
 }
