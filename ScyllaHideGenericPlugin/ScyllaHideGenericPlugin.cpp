@@ -82,14 +82,9 @@ DLL_EXPORT void ScyllaHideDebugLoop(const DEBUG_EVENT* DebugEvent)
 
         if (DebugEvent->u.CreateProcessInfo.lpStartAddress == NULL)
         {
-            //ATTACH
+            // Attach to an existing process.
             if (g_settings.opts().killAntiAttach)
-            {
-                if (!ApplyAntiAntiAttach(status.ProcessId))
-                {
-                    g_log.LogError(L"Anti-Anti-Attach failed");
-                }
-            }
+                ApplyAntiAntiAttach(status.ProcessId);
         }
 
         break;

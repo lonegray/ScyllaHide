@@ -1,6 +1,7 @@
 #include "Injector.h"
 #include <Psapi.h>
-#include "Scylla/Logger.h"
+
+#include <Scylla/Logger.h>
 #include <Scylla/NtApiLoader.h>
 #include <Scylla/OsInfo.h>
 #include <Scylla/PebHider.h>
@@ -499,76 +500,69 @@ bool RemoveDebugPrivileges(HANDLE hProcess)
     return false;
 }
 
-#define DbgBreakPoint_FUNC_SIZE 2
+#define DbgBreakPoint_FUNC_SIZE         0x02
 #ifdef _WIN64
-#define DbgUiRemoteBreakin_FUNC_SIZE 0x42
-#define NtContinue_FUNC_SIZE 11
+#define DbgUiRemoteBreakin_FUNC_SIZE    0x42
+#define NtContinue_FUNC_SIZE            0x0b
 #else
-#define DbgUiRemoteBreakin_FUNC_SIZE 0x54
-#define NtContinue_FUNC_SIZE 0x18
+#define DbgUiRemoteBreakin_FUNC_SIZE    0x54
+#define NtContinue_FUNC_SIZE            0x18
 #endif
 
-typedef struct _PATCH_FUNC {
-    PCHAR funcName;
-    PVOID funcAddr;
-    SIZE_T funcSize;
-} PATCH_FUNC;
-
-
-PATCH_FUNC patchFunctions[] = {
-    {
-        "DbgBreakPoint", 0, DbgBreakPoint_FUNC_SIZE
-    },
-    {
-        "DbgUiRemoteBreakin", 0, DbgUiRemoteBreakin_FUNC_SIZE
-    },
-    {
-        "NtContinue", 0, NtContinue_FUNC_SIZE
-    }
-};
-
-bool ApplyAntiAntiAttach(DWORD targetPid)
+void ApplyAntiAntiAttach(DWORD pid)
 {
-    bool resu = false;
+    static const struct {
+        const wchar_t *module;
+        const char *name;
+        size_t size;
+    } patch_funcs[] = {
+        { L"ntdll.dll", "DbgBreakPoint", DbgBreakPoint_FUNC_SIZE },
+        { L"ntdll.dll", "DbgUiRemoteBreakin", DbgUiRemoteBreakin_FUNC_SIZE },
+        { L"ntdll.dll", "NtContinue", NtContinue_FUNC_SIZE }
+    };
 
-    WCHAR modName[MAX_PATH] = { 0 };
-    HANDLE hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, targetPid);
-
-    if (!hProcess)
-        return resu;
-
-    HMODULE hMod = GetModuleHandleW(L"ntdll.dll");
-
-    for (int i = 0; i < _countof(patchFunctions); i++)
+    scl::Handle hProcess(OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, pid));
+    if (!hProcess.get())
     {
-        patchFunctions[i].funcAddr = GetProcAddress(hMod, patchFunctions[i].funcName);
+        g_log.LogError(L"Anti-Anti-Attach: Failed to open process (pid=%d): %s", pid, scl::FormatMessageW(GetLastError()).c_str());
+        return;
     }
 
-    //has remote ntdll same image base? if not -> crap
-    if (GetModuleBaseNameW(hProcess, hMod, modName, _countof(modName)))
+    for (size_t i = 0; i < _countof(patch_funcs); i++)
     {
-        if (wcsstr(modName, L"ntdll") || wcsstr(modName, L"NTDLL"))
+        auto hLocalModule = GetModuleHandleW(patch_funcs[i].module);
+        if (!hLocalModule)
         {
-            for (int i = 0; i < _countof(patchFunctions); i++)
-            {
-                if (WriteProcessMemory(hProcess, patchFunctions[i].funcAddr, patchFunctions[i].funcAddr, patchFunctions[i].funcSize, 0))
-                {
-                    resu = true;
-                }
-                else
-                {
-                    resu = false;
-                    break;
-                }
-            }
+            g_log.LogError(L"Anti-Anti-Attach: Failed to get module handle (%s). %s!%s will remain unpatched!",
+                scl::FormatMessageW(GetLastError()).c_str(), patch_funcs[i].module, scl::wstr_conv().from_bytes(patch_funcs[i].name).c_str());
+            continue;
         }
-        else
+
+        auto hRemoteModule = scl::GetRemoteModuleHandleW(hProcess.get(), patch_funcs[i].module);
+        if (!hRemoteModule)
         {
-            MessageBoxA(0, "Remote NTDLL does not have the same image base, please contact ScyllaHide developers!", "Error", MB_ICONERROR);
+            g_log.LogError(L"Anti-Anti-Attach: Failed to get remote module handle (%s). %s!%s will remain unpatched!",
+                scl::FormatMessageW(GetLastError()).c_str(), patch_funcs[i].module, scl::wstr_conv().from_bytes(patch_funcs[i].name).c_str());
+            continue;
+        }
+
+        // TODO: need more checks on hRemoteModule.
+
+        auto proc_addr = GetProcAddress(hLocalModule, patch_funcs[i].name);
+        if (!proc_addr)
+        {
+            g_log.LogError(L"Anti-Anti-Attach: Failed to get proc address (%s). %s!%s will remain unpatched!",
+                scl::FormatMessageW(GetLastError()).c_str(), patch_funcs[i].module, scl::wstr_conv().from_bytes(patch_funcs[i].name).c_str());
+            continue;
+        }
+
+        auto proc_addr_rva = (DWORD_PTR)proc_addr - (DWORD_PTR)hLocalModule;
+
+        if (WriteProcessMemory(hProcess.get(), (PVOID)((DWORD_PTR)hRemoteModule + proc_addr_rva), proc_addr, patch_funcs[i].size, nullptr))
+        {
+            g_log.LogError(L"Anti-Anti-Attach: Failed to patch process (%s). %s!%s will remain unpatched!",
+                scl::FormatMessageW(GetLastError()).c_str(), patch_funcs[i].module, scl::wstr_conv().from_bytes(patch_funcs[i].name).c_str());
+            continue;
         }
     }
-
-    CloseHandle(hProcess);
-
-    return resu;
 }

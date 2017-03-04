@@ -158,14 +158,9 @@ static void cbDebugloop(CBTYPE cbType, void* callbackInfo)
 
         if (d->DebugEvent->u.CreateProcessInfo.lpStartAddress == NULL)
         {
-            //ATTACH
+            // Attach to an existing process.
             if (g_settings.opts().killAntiAttach)
-            {
-                if (!ApplyAntiAntiAttach(ProcessId))
-                {
-                    MessageBoxW(hwndDlg, L"Anti-Anti-Attach failed", L"Error", MB_ICONERROR);
-                }
-            }
+                ApplyAntiAntiAttach(ProcessId);
         }
 
         break;

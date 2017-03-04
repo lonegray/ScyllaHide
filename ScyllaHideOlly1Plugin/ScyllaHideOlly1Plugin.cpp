@@ -443,15 +443,9 @@ extern "C" void DLL_EXPORT _ODBG_Pluginmainloop(DEBUG_EVENT *debugevent)
 
         if (epaddr == NULL)
         {
-            //ATTACH to an existing process!
-            //Apply anti-anti-attach
+            // Attach to an existing process.
             if (g_settings.opts().killAntiAttach)
-            {
-                if (!ApplyAntiAntiAttach(ProcessId))
-                {
-                    MessageBoxW(hwmain, L"Anti-Anti-Attach failed", L"Error", MB_ICONERROR);
-                }
-            }
+                ApplyAntiAntiAttach(ProcessId);
         }
 
         ZeroMemory(&g_hdd, sizeof(HOOK_DLL_DATA));

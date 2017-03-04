@@ -1,5 +1,7 @@
 #include "Util.h"
 #include <cstdio>
+#include <Psapi.h>
+
 #include "NtApiShim.h"
 
 std::wstring scl::fmtw(const wchar_t *fmt, ...)
@@ -197,4 +199,40 @@ bool scl::Wow64WriteProcessMemory64(HANDLE hProcess, PVOID64 address, LPCVOID bu
 #endif
 
     return false;
+}
+
+HMODULE scl::GetRemoteModuleHandleW(HANDLE hProcess, const wchar_t *module_name)
+{
+    std::vector<HMODULE> hMods(1);
+    DWORD buf_size = hMods.size() * sizeof(HMODULE);
+
+    if (!EnumProcessModules(hProcess, &hMods[0], hMods.size() * sizeof(HMODULE), &buf_size))
+        return nullptr;
+
+    if ((hMods.size() * sizeof(HMODULE)) < buf_size)
+    {
+        hMods.resize(buf_size / sizeof(HMODULE));
+
+        if (!EnumProcessModules(hProcess, &hMods[0], hMods.size() * sizeof(HMODULE), &buf_size))
+            return nullptr;
+    }
+
+    for (size_t i = 0; i < hMods.size(); i++)
+    {
+        wchar_t path[MAX_PATH];
+
+        if (!GetModuleFileNameExW(hProcess, hMods[i], path, _countof(path)))
+            continue;
+
+        const wchar_t *name = wcsrchr(path, L'\\');
+        if (!name)
+            continue;
+
+        name++;
+
+        if (_wcsicmp(module_name, name) == 0)
+            return hMods[i];
+    }
+
+    return nullptr;
 }

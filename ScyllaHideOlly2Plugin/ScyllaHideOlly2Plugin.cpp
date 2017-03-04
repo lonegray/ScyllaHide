@@ -348,14 +348,9 @@ extc void ODBG2_Pluginmainloop(DEBUG_EVENT *debugevent)
 
         if (debugevent->u.CreateProcessInfo.lpStartAddress == NULL)
         {
-            //ATTACH
+            // Attach to an existing process.
             if (g_settings.opts().killAntiAttach)
-            {
-                if (!ApplyAntiAntiAttach(ProcessId))
-                {
-                    MessageBoxW(hwollymain, L"Anti-Anti-Attach failed", L"Error", MB_ICONERROR);
-                }
-            }
+                ApplyAntiAntiAttach(ProcessId);
         }
 
         //change olly caption again !

@@ -11,7 +11,7 @@ void injectDll(DWORD targetPid, const WCHAR * dllPath);
 BYTE * ReadFileToMemory(const WCHAR * targetFilePath);
 void FillHookDllData(HANDLE hProcess, HOOK_DLL_DATA * data);
 bool StartFixBeingDebugged(DWORD targetPid, bool setToNull);
-bool ApplyAntiAntiAttach(DWORD targetPid);
+void ApplyAntiAntiAttach(DWORD pid);
 
 DWORD_PTR GetAddressOfEntryPoint(BYTE * dllMemory);
 bool RemoveDebugPrivileges(HANDLE hProcess);

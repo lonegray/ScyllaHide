@@ -78,4 +78,6 @@ namespace scl
 
     bool Wow64ReadProcessMemory64(HANDLE hProcess, PVOID64 address, PVOID buffer, ULONGLONG buffer_size, PULONGLONG bytes_read);
     bool Wow64WriteProcessMemory64(HANDLE hProcess, PVOID64 address, LPCVOID buffer, ULONGLONG buffer_size, PULONGLONG bytes_written);
+
+    HMODULE GetRemoteModuleHandleW(HANDLE hProcess, const wchar_t *module_name);
 };
