@@ -245,13 +245,13 @@ static HMODULE InjectDllNormal(HANDLE hProcess, const wchar_t *dll_path)
     scl::VirtualMemoryHandle remote_mem(hProcess, VirtualAllocEx(hProcess, nullptr, mem_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
     if (!remote_mem.get())
     {
-        g_log.LogError(L"Hook-Inject-Normal: Failed to allocate remote memory: %s", scl::FormatMessageW(GetLastError()).c_str());
+        g_log.LogError(L"Dll-Inject-Normal: Failed to allocate remote memory: %s", scl::FormatMessageW(GetLastError()).c_str());
         return nullptr;
     }
 
     if (!WriteProcessMemory(hProcess, remote_mem.get(), dll_path, mem_size, nullptr))
     {
-        g_log.LogError(L"Hook-Inject-Normal: Failed to write to remote process: %s", scl::FormatMessageW(GetLastError()).c_str());
+        g_log.LogError(L"Dll-Inject-Normal: Failed to write to remote process: %s", scl::FormatMessageW(GetLastError()).c_str());
         return nullptr;
     }
 
@@ -260,7 +260,7 @@ static HMODULE InjectDllNormal(HANDLE hProcess, const wchar_t *dll_path)
     scl::Handle hThread(CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)LoadLibraryW, remote_mem.get(), CREATE_SUSPENDED, nullptr));
     if (!hThread.get())
     {
-        g_log.LogError(L"Hook-Inject-Normal: Failed to execute remote LoadLibraryW: %s", scl::FormatMessageW(GetLastError()).c_str());
+        g_log.LogError(L"Dll-Inject-Normal: Failed to execute remote LoadLibraryW: %s", scl::FormatMessageW(GetLastError()).c_str());
         return nullptr;
     }
 
@@ -278,14 +278,14 @@ static HMODULE InjectDllStealth(HANDLE hProcess, const wchar_t *dll_path)
     std::basic_string<BYTE> dll_mem;
     if (!scl::ReadFileContents(dll_path, dll_mem))
     {
-        g_log.LogError(L"Hook-Inject-Stealth: Failed to read file %s: %s", dll_path, scl::FormatMessageW(GetLastError()).c_str());
+        g_log.LogError(L"Dll-Inject-Stealth: Failed to read file %s: %s", dll_path, scl::FormatMessageW(GetLastError()).c_str());
         return nullptr;
     }
 
     auto hModule = (HMODULE)MapModuleToProcess(hProcess, &dll_mem[0]);
     if (!hModule)
     {
-        g_log.LogError(L"Hook-Inject-Stealth: Failed to map DLL into remote process: %s", dll_path, scl::FormatMessageW(GetLastError()).c_str());
+        g_log.LogError(L"Dll-Inject-Stealth: Failed to map DLL into remote process: %s", dll_path, scl::FormatMessageW(GetLastError()).c_str());
         return nullptr;
     }
 
@@ -294,7 +294,7 @@ static HMODULE InjectDllStealth(HANDLE hProcess, const wchar_t *dll_path)
     auto entryPoint = nt_headers->OptionalHeader.AddressOfEntryPoint;
     if (!entryPoint)
     {
-        g_log.LogError(L"Hook-Inject-Stealth: Invalid entry point of injected DLL");
+        g_log.LogError(L"Dll-Inject-Stealth: Invalid entry point of injected DLL");
         return nullptr;
     }
 
@@ -303,7 +303,7 @@ static HMODULE InjectDllStealth(HANDLE hProcess, const wchar_t *dll_path)
     scl::Handle hThread(CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)dllMain, hModule, CREATE_SUSPENDED, nullptr));
     if (!hThread.get())
     {
-        g_log.LogError(L"Hook-Inject-Stealth: Failed to execute DllMain in remote process: %s", scl::FormatMessageW(GetLastError()).c_str());
+        g_log.LogError(L"Dll-Inject-Stealth: Failed to execute DllMain in remote process: %s", scl::FormatMessageW(GetLastError()).c_str());
         return nullptr;
     }
 
