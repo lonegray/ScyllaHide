@@ -238,7 +238,7 @@ void DoThreadMagic(HANDLE hThread)
     WaitForSingleObject(hThread, INFINITE);
 }
 
-HMODULE InjectDllNormal(HANDLE hProcess, const wchar_t *dll_path)
+static HMODULE InjectDllNormal(HANDLE hProcess, const wchar_t *dll_path)
 {
     auto mem_size = (wcslen(dll_path) + 1) * sizeof(WCHAR);
 
@@ -273,77 +273,57 @@ HMODULE InjectDllNormal(HANDLE hProcess, const wchar_t *dll_path)
     return (HMODULE)hModule;
 }
 
-DWORD_PTR GetAddressOfEntryPoint(BYTE * dllMemory)
+static HMODULE InjectDllStealth(HANDLE hProcess, const wchar_t *dll_path)
 {
-    PIMAGE_DOS_HEADER pDos = (PIMAGE_DOS_HEADER)dllMemory;
-    PIMAGE_NT_HEADERS pNt = (PIMAGE_NT_HEADERS)((DWORD_PTR)pDos + pDos->e_lfanew);
-    return pNt->OptionalHeader.AddressOfEntryPoint;
-}
-
-LPVOID StealthDllInjection(HANDLE hProcess, const WCHAR * dllPath, BYTE * dllMemory)
-{
-    LPVOID remoteImageBaseOfInjectedDll = 0;
-
-    if (dllMemory)
+    std::basic_string<BYTE> dll_mem;
+    if (!scl::ReadFileContents(dll_path, dll_mem))
     {
-        remoteImageBaseOfInjectedDll = MapModuleToProcess(hProcess, dllMemory);
-        if (remoteImageBaseOfInjectedDll)
-        {
-
-            DWORD_PTR entryPoint = GetAddressOfEntryPoint(dllMemory);
-
-            if (entryPoint)
-            {
-                DWORD_PTR dllMain = entryPoint + (DWORD_PTR)remoteImageBaseOfInjectedDll;
-
-                g_log.LogInfo(L"DLL INJECTION: Starting thread at RVA %p VA %p!", entryPoint, dllMain);
-
-                HANDLE hThread = CreateRemoteThread(hProcess, NULL, NULL, (LPTHREAD_START_ROUTINE)dllMain, remoteImageBaseOfInjectedDll, CREATE_SUSPENDED, 0);
-                if (hThread)
-                {
-                    DoThreadMagic(hThread);
-
-                    CloseHandle(hThread);
-                }
-                else
-                {
-                    g_log.LogInfo(L"DLL INJECTION: Failed to start thread %d!", GetLastError());
-                }
-            }
-        }
-        else
-        {
-            g_log.LogInfo(L"DLL INJECTION: Failed to map image of %s!", dllPath);
-        }
-        free(dllMemory);
+        g_log.LogError(L"Hook-Inject-Stealth: Failed to read file %s: %s", dll_path, scl::FormatMessageW(GetLastError()).c_str());
+        return nullptr;
     }
 
-    return remoteImageBaseOfInjectedDll;
+    auto hModule = (HMODULE)MapModuleToProcess(hProcess, &dll_mem[0]);
+    if (!hModule)
+    {
+        g_log.LogError(L"Hook-Inject-Stealth: Failed to map DLL into remote process: %s", dll_path, scl::FormatMessageW(GetLastError()).c_str());
+        return nullptr;
+    }
+
+    auto dos_headers = (PIMAGE_DOS_HEADER)&dll_mem[0];
+    auto nt_headers = (PIMAGE_NT_HEADERS)((DWORD_PTR)dos_headers + dos_headers->e_lfanew);
+    auto entryPoint = nt_headers->OptionalHeader.AddressOfEntryPoint;
+    if (!entryPoint)
+    {
+        g_log.LogError(L"Hook-Inject-Stealth: Invalid entry point of injected DLL");
+        return nullptr;
+    }
+
+    DWORD_PTR dllMain = (DWORD_PTR)hModule + entryPoint;
+
+    scl::Handle hThread(CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)dllMain, hModule, CREATE_SUSPENDED, nullptr));
+    if (!hThread.get())
+    {
+        g_log.LogError(L"Hook-Inject-Stealth: Failed to execute DllMain in remote process: %s", scl::FormatMessageW(GetLastError()).c_str());
+        return nullptr;
+    }
+
+    DoThreadMagic(hThread.get());
+
+    return hModule;
 }
 
 void injectDll(DWORD targetPid, const WCHAR * dllPath)
 {
-    std::basic_string<BYTE> dllMemory;
-    if (!scl::ReadFileContents(dllPath, dllMemory))
-    {
-        g_log.LogInfo(L"DLL INJECTION: Failed to read file %s!", dllPath);
-        return;
-    }
-
     HANDLE hProcess = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, targetPid);
 
     if (hProcess)
     {
         LPVOID remoteImage = 0;
 
-        DWORD entryPoint = (DWORD)GetAddressOfEntryPoint(&dllMemory[0]);
-
-        if (entryPoint) g_log.LogInfo(L"DLL entry point (DllMain) RVA %X!", entryPoint);
-
         if (g_settings.opts().dllStealth)
         {
             g_log.LogInfo(L"Starting Stealth DLL Injection!");
-            remoteImage = StealthDllInjection(hProcess, dllPath, &dllMemory[0]);
+            remoteImage = InjectDllStealth(hProcess, dllPath);
         }
         else if (g_settings.opts().dllNormal)
         {

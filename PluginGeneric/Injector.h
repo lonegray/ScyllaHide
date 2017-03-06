@@ -12,5 +12,4 @@ void FillHookDllData(HANDLE hProcess, HOOK_DLL_DATA * data);
 bool StartFixBeingDebugged(DWORD targetPid, bool setToNull);
 void ApplyAntiAntiAttach(DWORD pid);
 
-DWORD_PTR GetAddressOfEntryPoint(BYTE * dllMemory);
 bool RemoveDebugPrivileges(HANDLE hProcess);
