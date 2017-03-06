@@ -1,6 +1,5 @@
 #include <windows.h>
 #include "..\HookLibrary\HookMain.h"
-#include "..\InjectorCLI\DynamicMapping.h"
 
 void ReadNtApiInformation(const wchar_t *file, HOOK_DLL_DATA *hde);
 

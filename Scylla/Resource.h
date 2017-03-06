@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Windows.h>
+#include <utility>
 
 namespace scl
 {
@@ -37,6 +38,13 @@ namespace scl
         VirtualMemoryHandle &operator=(const VirtualMemoryHandle &other) = delete;
 
         void *get() const { return address_; }
+        std::pair<HANDLE, void*> reset(HANDLE hProcess, void *address)
+        {
+            auto ret = std::make_pair(process_, address_);
+            process_ = hProcess;
+            address_ = address;
+            return ret;
+        }
 
     private:
         HANDLE process_;

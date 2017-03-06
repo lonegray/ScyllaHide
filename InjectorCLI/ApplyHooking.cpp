@@ -1,12 +1,13 @@
 #include "ApplyHooking.h"
 
+#include <Scylla/DynamicMapping.h>
 #include <Scylla/Logger.h>
-#include <Scylla/OsInfo.h>
+#include "Scylla/OsInfo.h"
 #include <Scylla/PebHider.h>
 #include <Scylla/Util.h>
 
-#include "DynamicMapping.h"
 #include "RemoteHook.h"
+
 
 #define HOOK(name) hdd->d##name = (t_##name)DetourCreateRemote(hProcess,_##name, Hooked##name, true, &hdd->##name##BackupSize)
 #define HOOK_NATIVE(name) hdd->d##name = (t_##name)DetourCreateRemoteNative(hProcess,_##name, Hooked##name, true, &hdd->##name##BackupSize)
@@ -77,25 +78,25 @@ void ApplyNtdllHook(HOOK_DLL_DATA * hdd, HANDLE hProcess, BYTE * dllMemory, DWOR
     HookNative = hdd->HookNative;
 #endif
 
-    void * HookedNtSetInformationThread = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtSetInformationThread") + imageBase);
-    void * HookedNtQuerySystemInformation = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtQuerySystemInformation") + imageBase);
-    void * HookedNtQueryInformationProcess = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtQueryInformationProcess") + imageBase);
-    void * HookedNtSetInformationProcess = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtSetInformationProcess") + imageBase);
-    void * HookedNtQueryObject = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtQueryObject") + imageBase);
-    void * HookedNtYieldExecution = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtYieldExecution") + imageBase);
-    void * HookedNtGetContextThread = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtGetContextThread") + imageBase);
-    void * HookedNtSetContextThread = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtSetContextThread") + imageBase);
-    void * HookedKiUserExceptionDispatcher = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedKiUserExceptionDispatcher") + imageBase);
-    void * HookedNtContinue = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtContinue") + imageBase);
-    void * HookedNtClose = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtClose") + imageBase);
-    void * HookedNtSetDebugFilterState = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtSetDebugFilterState") + imageBase);
-    void * HookedNtCreateThread = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtCreateThread") + imageBase);
-    void * HookedNtCreateThreadEx = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtCreateThreadEx") + imageBase);
-    void * HookedNtQuerySystemTime = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtQuerySystemTime") + imageBase);
-    void * HookedNtQueryPerformanceCounter = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtQueryPerformanceCounter") + imageBase);
-    void * HookedNtResumeThread = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtResumeThread") + imageBase);
+    void * HookedNtSetInformationThread = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtSetInformationThread") + imageBase);
+    void * HookedNtQuerySystemInformation = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtQuerySystemInformation") + imageBase);
+    void * HookedNtQueryInformationProcess = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtQueryInformationProcess") + imageBase);
+    void * HookedNtSetInformationProcess = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtSetInformationProcess") + imageBase);
+    void * HookedNtQueryObject = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtQueryObject") + imageBase);
+    void * HookedNtYieldExecution = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtYieldExecution") + imageBase);
+    void * HookedNtGetContextThread = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtGetContextThread") + imageBase);
+    void * HookedNtSetContextThread = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtSetContextThread") + imageBase);
+    void * HookedKiUserExceptionDispatcher = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedKiUserExceptionDispatcher") + imageBase);
+    void * HookedNtContinue = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtContinue") + imageBase);
+    void * HookedNtClose = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtClose") + imageBase);
+    void * HookedNtSetDebugFilterState = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtSetDebugFilterState") + imageBase);
+    void * HookedNtCreateThread = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtCreateThread") + imageBase);
+    void * HookedNtCreateThreadEx = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtCreateThreadEx") + imageBase);
+    void * HookedNtQuerySystemTime = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtQuerySystemTime") + imageBase);
+    void * HookedNtQueryPerformanceCounter = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtQueryPerformanceCounter") + imageBase);
+    void * HookedNtResumeThread = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtResumeThread") + imageBase);
 
-    HookedNativeCallInternal = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNativeCallInternal") + imageBase);
+    HookedNativeCallInternal = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNativeCallInternal") + imageBase);
 
     _NtSetInformationThread = (t_NtSetInformationThread)GetProcAddress(hNtdll, "NtSetInformationThread");
     _NtQuerySystemInformation = (t_NtQuerySystemInformation)GetProcAddress(hNtdll, "NtQuerySystemInformation");
@@ -243,11 +244,11 @@ void ApplyKernel32Hook(HOOK_DLL_DATA * hdd, HANDLE hProcess, BYTE * dllMemory, D
     hKernel = GetModuleHandleW(L"kernel32.dll");
     hKernelbase = GetModuleHandleW(L"kernelbase.dll");
 
-    void * HookedOutputDebugStringA = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedOutputDebugStringA") + imageBase);
-    void * HookedGetTickCount = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedGetTickCount") + imageBase);
-    void * HookedGetTickCount64 = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedGetTickCount64") + imageBase);
-    void * HookedGetLocalTime = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedGetLocalTime") + imageBase);
-    void * HookedGetSystemTime = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedGetSystemTime") + imageBase);
+    void * HookedOutputDebugStringA = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedOutputDebugStringA") + imageBase);
+    void * HookedGetTickCount = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedGetTickCount") + imageBase);
+    void * HookedGetTickCount64 = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedGetTickCount64") + imageBase);
+    void * HookedGetLocalTime = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedGetLocalTime") + imageBase);
+    void * HookedGetSystemTime = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedGetSystemTime") + imageBase);
 
     HMODULE hCurrent = hKernel;
     if (hKernelbase)
@@ -309,10 +310,10 @@ void ApplyUser32Hook(HOOK_DLL_DATA * hdd, HANDLE hProcess, BYTE * dllMemory, DWO
         return;
     }
 
-    void * HookedBlockInput = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedBlockInput") + imageBase);
-    void * HookedNtUserFindWindowEx = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtUserFindWindowEx") + imageBase);
-    void * HookedNtUserBuildHwndList = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtUserBuildHwndList") + imageBase);
-    void * HookedNtUserQueryWindow = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtUserQueryWindow") + imageBase);
+    void * HookedBlockInput = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedBlockInput") + imageBase);
+    void * HookedNtUserFindWindowEx = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtUserFindWindowEx") + imageBase);
+    void * HookedNtUserBuildHwndList = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtUserBuildHwndList") + imageBase);
+    void * HookedNtUserQueryWindow = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtUserQueryWindow") + imageBase);
 
     g_log.LogDebug(L"ApplyUser32Hook -> HookedBlockInput %p HookedNtUserFindWindowEx %p HookedNtUserBuildHwndList %p HookedNtUserQueryWindow %p",
         HookedBlockInput,
@@ -369,10 +370,10 @@ void ApplyWin32uHook(HOOK_DLL_DATA * hdd, HANDLE hProcess, BYTE * dllMemory, DWO
 {
     hWin32u = GetModuleHandleW(L"win32u.dll");
 
-    void * HookedNtUserBlockInput = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtUserBlockInput") + imageBase);
-    void * HookedNtUserFindWindowEx = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtUserFindWindowEx") + imageBase);
-    void * HookedNtUserBuildHwndList = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtUserBuildHwndList") + imageBase);
-    void * HookedNtUserQueryWindow = (void *)(GetDllFunctionAddressRVA(dllMemory, "HookedNtUserQueryWindow") + imageBase);
+    void * HookedNtUserBlockInput = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtUserBlockInput") + imageBase);
+    void * HookedNtUserFindWindowEx = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtUserFindWindowEx") + imageBase);
+    void * HookedNtUserBuildHwndList = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtUserBuildHwndList") + imageBase);
+    void * HookedNtUserQueryWindow = (void *)(scl::GetDllFunctionAddressRva(dllMemory, "HookedNtUserQueryWindow") + imageBase);
 
     _NtUserBlockInput = (t_NtUserBlockInput)GetProcAddress(hWin32u, "NtUserBlockInput");
     _NtUserFindWindowEx = (t_NtUserFindWindowEx)GetProcAddress(hWin32u, "NtUserFindWindowEx");

@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DynamicMapping.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="NtApiLoader.cpp" />
     <ClCompile Include="PebHider.cpp" />
@@ -30,6 +31,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dbghelp.h" />
+    <ClInclude Include="DynamicMapping.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="NtApiLoader.h" />
     <ClInclude Include="NtApiShim.h" />

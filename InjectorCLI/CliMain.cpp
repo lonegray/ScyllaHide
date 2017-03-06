@@ -3,17 +3,18 @@
 #include <TlHelp32.h>
 #include <cstdio>
 #include <cstring>
+
+#include <Scylla/DynamicMapping.h>
 #include <Scylla/Logger.h>
 #include <Scylla/NtApiLoader.h>
 #include <Scylla/PebHider.h>
 #include <Scylla/Settings.h>
 #include <Scylla/Util.h>
 
-#include "DynamicMapping.h"
 #include "..\HookLibrary\HookMain.h"
-#include "RemoteHook.h"
 #include "ApplyHooking.h"
 #include "../PluginGeneric/Injector.h"
+
 
 scl::Settings g_settings;
 scl::Logger g_log;
@@ -104,31 +105,20 @@ static bool StartHooking(HANDLE hProcess, BYTE * dllMemory, DWORD_PTR imageBase)
 
 void startInjectionProcess(HANDLE hProcess, BYTE * dllMemory)
 {
-    LPVOID remoteImageBase = MapModuleToProcess(hProcess, dllMemory);
+    auto ret = scl::MapModuleToProcess(hProcess, dllMemory);
+    auto remoteImageBase = ret.first;
+
     if (remoteImageBase)
     {
         FillHookDllData(hProcess, &g_hdd);
-        //DWORD initDllFuncAddressRva = GetDllFunctionAddressRVA(dllMemory, "InitDll");
-        DWORD hookDllDataAddressRva = GetDllFunctionAddressRVA(dllMemory, "HookDllData");
+
+        DWORD hookDllDataAddressRva = scl::GetDllFunctionAddressRva(dllMemory, "HookDllData");
 
         StartHooking(hProcess, dllMemory, (DWORD_PTR)remoteImageBase);
 
-
-
         if (WriteProcessMemory(hProcess, (LPVOID)((DWORD_PTR)hookDllDataAddressRva + (DWORD_PTR)remoteImageBase), &g_hdd, sizeof(HOOK_DLL_DATA), 0))
         {
-            //DWORD exitCode = StartDllInitFunction(hProcess, ((DWORD_PTR)initDllFuncAddressRva + (DWORD_PTR)remoteImageBase), remoteImageBase);
-
-
-            //if (exitCode == HOOK_ERROR_SUCCESS)
-
-            //{
             wprintf(L"Injection successful, Imagebase %p\n", remoteImageBase);
-            //}
-            //else
-            //{
-            //	wprintf(L"Injection failed, exit code %d 0x%X Imagebase %p\n", exitCode, exitCode, remoteImageBase);
-            //}
         }
         else
         {

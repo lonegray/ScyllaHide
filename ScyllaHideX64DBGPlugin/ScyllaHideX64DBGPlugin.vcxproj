@@ -124,7 +124,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\InjectorCLI\ApplyHooking.cpp" />
-    <ClCompile Include="..\InjectorCLI\DynamicMapping.cpp" />
     <ClCompile Include="..\InjectorCLI\RemoteHook.cpp" />
     <ClCompile Include="..\PluginGeneric\AttachDialog.cpp" />
     <ClCompile Include="..\PluginGeneric\Injector.cpp" />
@@ -133,7 +132,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\InjectorCLI\ApplyHooking.h" />
-    <ClInclude Include="..\InjectorCLI\DynamicMapping.h" />
     <ClInclude Include="..\InjectorCLI\RemoteHook.h" />
     <ClInclude Include="..\PluginGeneric\AttachDialog.h" />
     <ClInclude Include="..\PluginGeneric\Injector.h" />

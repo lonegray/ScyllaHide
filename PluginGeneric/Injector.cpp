@@ -1,6 +1,6 @@
 #include "Injector.h"
-#include <Psapi.h>
 
+#include <Scylla/DynamicMapping.h>
 #include <Scylla/Logger.h>
 #include <Scylla/NtApiLoader.h>
 #include <Scylla/OsInfo.h>
@@ -163,8 +163,7 @@ bool StartHooking(HANDLE hProcess, HOOK_DLL_DATA *hdd, BYTE * dllMemory, DWORD_P
 
 void startInjectionProcess(HANDLE hProcess, HOOK_DLL_DATA *hdd, BYTE * dllMemory, bool newProcess)
 {
-    DWORD initDllFuncAddressRva = GetDllFunctionAddressRVA(dllMemory, "InitDll");
-    DWORD hookDllDataAddressRva = GetDllFunctionAddressRVA(dllMemory, "HookDllData");
+    DWORD hookDllDataAddressRva = scl::GetDllFunctionAddressRva(dllMemory, "HookDllData");
 
     if (newProcess == false)
     {
@@ -183,7 +182,7 @@ void startInjectionProcess(HANDLE hProcess, HOOK_DLL_DATA *hdd, BYTE * dllMemory
 
         RestoreHooks(hdd, hProcess);
 
-        remoteImageBase = MapModuleToProcess(hProcess, dllMemory);
+        remoteImageBase = scl::MapModuleToProcess(hProcess, dllMemory).first;
         if (remoteImageBase)
         {
             FillHookDllData(hProcess, hdd);
@@ -282,12 +281,14 @@ static HMODULE InjectDllStealth(HANDLE hProcess, const wchar_t *dll_path)
         return nullptr;
     }
 
-    auto hModule = (HMODULE)MapModuleToProcess(hProcess, &dll_mem[0]);
-    if (!hModule)
+    auto ret = scl::MapModuleToProcess(hProcess, &dll_mem[0]);
+    if (!ret.first)
     {
-        g_log.LogError(L"Dll-Inject-Stealth: Failed to map DLL into remote process: %s", dll_path, scl::FormatMessageW(GetLastError()).c_str());
+        g_log.LogError(L"Dll-Inject-Stealth: Failed to map DLL into remote process: %s", dll_path, ret.second.c_str());
         return nullptr;
     }
+
+    auto hModule = (HMODULE)ret.first;
 
     auto dos_headers = (PIMAGE_DOS_HEADER)&dll_mem[0];
     auto nt_headers = (PIMAGE_NT_HEADERS)((DWORD_PTR)dos_headers + dos_headers->e_lfanew);
