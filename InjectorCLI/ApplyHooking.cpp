@@ -1,8 +1,10 @@
+#include "ApplyHooking.h"
+
 #include <Scylla/Logger.h>
 #include <Scylla/OsInfo.h>
 #include <Scylla/PebHider.h>
+#include <Scylla/Util.h>
 
-#include "ApplyHooking.h"
 #include "DynamicMapping.h"
 #include "RemoteHook.h"
 
@@ -299,7 +301,7 @@ void ApplyKernel32Hook(HOOK_DLL_DATA * hdd, HANDLE hProcess, BYTE * dllMemory, D
 void ApplyUser32Hook(HOOK_DLL_DATA * hdd, HANDLE hProcess, BYTE * dllMemory, DWORD_PTR imageBase)
 {
     hUser = GetModuleHandleW(L"user32.dll");
-    hUserRemote = GetModuleBaseRemote(hProcess, L"user32.dll");
+    hUserRemote = scl::GetRemoteModuleHandleW(hProcess, L"user32.dll");
 
     if (!hUser || !hUserRemote)
     {

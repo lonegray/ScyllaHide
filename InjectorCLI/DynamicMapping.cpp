@@ -202,37 +202,6 @@ DWORD GetDllFunctionAddressRVA(BYTE * dllMemory, LPCSTR apiName)
     return 0;
 }
 
-HMODULE GetModuleBaseRemote(HANDLE hProcess, const wchar_t* szDLLName)
-{
-    DWORD cbNeeded = 0;
-    wchar_t szModuleName[MAX_PATH] = { 0 };
-    if (EnumProcessModules(hProcess, 0, 0, &cbNeeded))
-    {
-        HMODULE* hMods = (HMODULE*)malloc(cbNeeded*sizeof(HMODULE));
-        if (EnumProcessModules(hProcess, hMods, cbNeeded, &cbNeeded))
-        {
-            for (unsigned int i = 0; i < cbNeeded / sizeof(HMODULE); i++)
-            {
-                szModuleName[0] = 0;
-                if (GetModuleFileNameExW(hProcess, hMods[i], szModuleName, _countof(szModuleName)))
-                {
-                    wchar_t* dllName = wcsrchr(szModuleName, L'\\');
-                    if (dllName)
-                    {
-                        dllName++;
-                        if (!_wcsicmp(dllName, szDLLName))
-                        {
-                            return hMods[i];
-                        }
-                    }
-                }
-            }
-        }
-        free(hMods);
-    }
-    return 0;
-}
-
 DWORD StartDllInitFunction(HANDLE hProcess, DWORD_PTR functionAddress, LPVOID imageBase)
 {
     NTSTATUS ntStat = 0;

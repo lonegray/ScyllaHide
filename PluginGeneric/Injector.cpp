@@ -367,10 +367,10 @@ void FillHookDllData(HANDLE hProcess, HOOK_DLL_DATA *hdd)
     HMODULE localKernelbase = GetModuleHandleW(L"kernelbase.dll");
     HMODULE localNtdll = GetModuleHandleW(L"ntdll.dll");
 
-    hdd->hNtdll = GetModuleBaseRemote(hProcess, L"ntdll.dll");
-    hdd->hkernel32 = GetModuleBaseRemote(hProcess, L"kernel32.dll");
-    hdd->hkernelBase = GetModuleBaseRemote(hProcess, L"kernelbase.dll");
-    hdd->hUser32 = GetModuleBaseRemote(hProcess, L"user32.dll");
+    hdd->hNtdll = scl::GetRemoteModuleHandleW(hProcess, L"ntdll.dll");
+    hdd->hkernel32 = scl::GetRemoteModuleHandleW(hProcess, L"kernel32.dll");
+    hdd->hkernelBase = scl::GetRemoteModuleHandleW(hProcess, L"kernelbase.dll");
+    hdd->hUser32 = scl::GetRemoteModuleHandleW(hProcess, L"user32.dll");
 
     hdd->EnablePebBeingDebugged = g_settings.opts().fixPebBeingDebugged;
     hdd->EnablePebHeapFlags = g_settings.opts().fixPebHeapFlags;
