@@ -212,11 +212,10 @@ void startInjection(DWORD targetPid, HOOK_DLL_DATA *hdd, const WCHAR * dllPath, 
     HANDLE hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, targetPid);
     if (hProcess)
     {
-        BYTE * dllMemory = ReadFileToMemory(dllPath);
-        if (dllMemory)
+        std::basic_string<BYTE> dllMemory;
+        if (scl::ReadFileContents(dllPath, dllMemory))
         {
-            startInjectionProcess(hProcess, hdd, dllMemory, newProcess);
-            free(dllMemory);
+            startInjectionProcess(hProcess, hdd, &dllMemory[0], newProcess);
         }
         else
         {
@@ -324,21 +323,27 @@ LPVOID StealthDllInjection(HANDLE hProcess, const WCHAR * dllPath, BYTE * dllMem
 
 void injectDll(DWORD targetPid, const WCHAR * dllPath)
 {
-    HANDLE hProcess = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, targetPid);
-    BYTE * dllMemory = ReadFileToMemory(dllPath);
+    std::basic_string<BYTE> dllMemory;
+    if (!scl::ReadFileContents(dllPath, dllMemory))
+    {
+        g_log.LogInfo(L"DLL INJECTION: Failed to read file %s!", dllPath);
+        return;
+    }
 
-    if (hProcess && dllMemory)
+    HANDLE hProcess = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, targetPid);
+
+    if (hProcess)
     {
         LPVOID remoteImage = 0;
 
-        DWORD entryPoint = (DWORD)GetAddressOfEntryPoint(dllMemory);
+        DWORD entryPoint = (DWORD)GetAddressOfEntryPoint(&dllMemory[0]);
 
         if (entryPoint) g_log.LogInfo(L"DLL entry point (DllMain) RVA %X!", entryPoint);
 
         if (g_settings.opts().dllStealth)
         {
             g_log.LogInfo(L"Starting Stealth DLL Injection!");
-            remoteImage = StealthDllInjection(hProcess, dllPath, dllMemory);
+            remoteImage = StealthDllInjection(hProcess, dllPath, &dllMemory[0]);
         }
         else if (g_settings.opts().dllNormal)
         {
@@ -380,44 +385,12 @@ void injectDll(DWORD targetPid, const WCHAR * dllPath)
             }
         }
 
-        free(dllMemory);
         CloseHandle(hProcess);
     }
     else
     {
-        if (!hProcess) g_log.LogInfo(L"DLL INJECTION: Cannot open process handle %d", targetPid);
-        if (!dllMemory) g_log.LogInfo(L"DLL INJECTION: Failed to read file %s!", dllPath);
+        g_log.LogInfo(L"DLL INJECTION: Cannot open process handle %d", targetPid);
     }
-}
-
-BYTE * ReadFileToMemory(const WCHAR * targetFilePath)
-{
-    HANDLE hFile;
-    DWORD dwBytesRead;
-    DWORD FileSize;
-    BYTE* FilePtr = 0;
-
-    hFile = CreateFileW(targetFilePath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, 0);
-    if (hFile != INVALID_HANDLE_VALUE)
-    {
-        FileSize = GetFileSize(hFile, NULL);
-        if (FileSize > 0)
-        {
-            FilePtr = (BYTE*)calloc(FileSize + 1, 1);
-            if (FilePtr)
-            {
-                if (!ReadFile(hFile, (LPVOID)FilePtr, FileSize, &dwBytesRead, NULL))
-                {
-                    free(FilePtr);
-                    FilePtr = 0;
-                }
-
-            }
-        }
-        CloseHandle(hFile);
-    }
-
-    return FilePtr;
 }
 
 void FillHookDllData(HANDLE hProcess, HOOK_DLL_DATA *hdd)

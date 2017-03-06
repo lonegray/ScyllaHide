@@ -236,3 +236,26 @@ HMODULE scl::GetRemoteModuleHandleW(HANDLE hProcess, const wchar_t *module_name)
 
     return nullptr;
 }
+
+/**
+ * @remarks Support only <= 4GiB files.
+ */
+bool scl::ReadFileContents(const wchar_t *filepath, std::basic_string<BYTE> &buf)
+{
+    scl::Handle hFile(CreateFileW(filepath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr));
+    if (hFile.get() == INVALID_HANDLE_VALUE)
+        return false;
+
+    LARGE_INTEGER size;
+    if (!GetFileSizeEx(hFile.get(), &size))
+        return false;
+
+    if (size.QuadPart > (DWORD)(-1))
+    {
+        SetLastError(ERROR_FILE_TOO_LARGE);
+        return false;
+    }
+
+    buf.resize((DWORD)size.QuadPart);
+    return ReadFile(hFile.get(), &buf[0], (DWORD)buf.size(), nullptr, nullptr) == TRUE;
+}

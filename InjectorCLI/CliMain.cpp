@@ -28,7 +28,6 @@ void ReadSettings();
 DWORD GetProcessIdByName(const WCHAR * processName);
 void startInjection(DWORD targetPid, const WCHAR * dllPath);
 bool SetDebugPrivileges();
-BYTE * ReadFileToMemory(const WCHAR * targetFilePath);
 void startInjectionProcess(HANDLE hProcess, BYTE * dllMemory);
 bool StartHooking(HANDLE hProcess, BYTE * dllMemory, DWORD_PTR imageBase);
 
@@ -143,11 +142,10 @@ void startInjection(DWORD targetPid, const WCHAR * dllPath)
     HANDLE hProcess = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, targetPid);
     if (hProcess)
     {
-        BYTE * dllMemory = ReadFileToMemory(dllPath);
-        if (dllMemory)
+        std::basic_string<BYTE> dllMemory;
+        if (scl::ReadFileContents(dllPath, dllMemory))
         {
-            startInjectionProcess(hProcess, dllMemory);
-            free(dllMemory);
+            startInjectionProcess(hProcess, &dllMemory[0]);
         }
         else
         {
