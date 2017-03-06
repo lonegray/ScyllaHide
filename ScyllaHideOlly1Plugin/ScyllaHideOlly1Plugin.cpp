@@ -324,7 +324,7 @@ extern "C" void DLL_EXPORT _ODBG_Pluginaction(int origin, int action, void *item
             if (ProcessId) {
                 wchar_t dllPath[MAX_PATH] = {};
                 if (scl::GetFileDialogW(dllPath, _countof(dllPath)))
-                    injectDll(ProcessId, dllPath);
+                    InjectDll(ProcessId, dllPath);
             }
             break;
         }

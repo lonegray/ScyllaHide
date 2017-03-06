@@ -312,65 +312,53 @@ static HMODULE InjectDllStealth(HANDLE hProcess, const wchar_t *dll_path)
     return hModule;
 }
 
-void injectDll(DWORD targetPid, const WCHAR * dllPath)
+void InjectDll(DWORD pid, const wchar_t *dll_path)
 {
-    HANDLE hProcess = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, targetPid);
-
-    if (hProcess)
+    scl::Handle hProcess(OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, pid));
+    if (!hProcess.get())
     {
-        LPVOID remoteImage = 0;
+        g_log.LogError(L"Dll-Inject: Failed to open PID %d: %s", pid, scl::FormatMessageW(GetLastError()).c_str());
+        return;
+    }
 
-        if (g_settings.opts().dllStealth)
-        {
-            g_log.LogInfo(L"Starting Stealth DLL Injection!");
-            remoteImage = InjectDllStealth(hProcess, dllPath);
-        }
-        else if (g_settings.opts().dllNormal)
-        {
-            g_log.LogInfo(L"Starting Normal DLL Injection!");
-            remoteImage = InjectDllNormal(hProcess, dllPath);
-        }
-        else
-        {
-            g_log.LogInfo(L"DLL INJECTION: No injection type selected!");
-        }
+    HMODULE hRemoteModule = nullptr;
 
-        if (remoteImage)
-        {
-            g_log.LogInfo(L"DLL INJECTION: Injection of %s successful, Imagebase %p", dllPath, remoteImage);
-
-            if (g_settings.opts().dllUnload)
-            {
-                g_log.LogInfo(L"DLL INJECTION: Unloading Imagebase %p", remoteImage);
-
-                if (g_settings.opts().dllNormal)
-                {
-                    HANDLE hThread = CreateRemoteThread(hProcess, NULL, NULL, (LPTHREAD_START_ROUTINE)FreeLibrary, remoteImage, CREATE_SUSPENDED, 0);
-                    if (hThread)
-                    {
-                        DoThreadMagic(hThread);
-                        CloseHandle(hThread);
-                        g_log.LogInfo(L"DLL INJECTION: Unloading Imagebase %p successful", remoteImage);
-                    }
-                    else
-                    {
-                        g_log.LogInfo(L"DLL INJECTION: Unloading Imagebase %p FAILED", remoteImage);
-                    }
-                }
-                else if (g_settings.opts().dllStealth)
-                {
-                    VirtualFreeEx(hProcess, remoteImage, 0, MEM_RELEASE);
-                    g_log.LogInfo(L"DLL INJECTION: Unloading Imagebase %p successful", remoteImage);
-                }
-            }
-        }
-
-        CloseHandle(hProcess);
+    if (g_settings.opts().dllStealth)
+    {
+        hRemoteModule = InjectDllStealth(hProcess.get(), dll_path);
     }
     else
     {
-        g_log.LogInfo(L"DLL INJECTION: Cannot open process handle %d", targetPid);
+        if (!g_settings.opts().dllNormal)
+            g_log.LogInfo(L"Dll-Inject: Inject type not selected, using normal injection.");
+        hRemoteModule = InjectDllNormal(hProcess.get(), dll_path);
     }
+
+    if (!hRemoteModule)
+        return;
+
+    g_log.LogInfo(L"Dll-Inject: Successful injected %s, ImageBase %p", dll_path, hRemoteModule);
+
+    if (g_settings.opts().dllUnload)
+    {
+        if (g_settings.opts().dllStealth)
+        {
+            VirtualFreeEx(hProcess.get(), hRemoteModule, 0, MEM_RELEASE);
+        }
+        else
+        {
+            scl::Handle hThread(CreateRemoteThread(hProcess.get(), nullptr, 0, (LPTHREAD_START_ROUTINE)FreeLibrary, hRemoteModule, CREATE_SUSPENDED, nullptr));
+            if (!hThread.get())
+            {
+                g_log.LogError(L"Dll-Inject: Failed to unload %s", dll_path);
+                return;
+            }
+
+            DoThreadMagic(hThread.get());
+        }
+    }
+
+    g_log.LogInfo(L"Dll-Inject: Successful unloaded %s", dll_path);
 }
 
 void FillHookDllData(HANDLE hProcess, HOOK_DLL_DATA *hdd)

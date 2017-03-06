@@ -837,7 +837,7 @@ INT_PTR CALLBACK OptionsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
                     else
                     {
 #ifndef BUILD_IDA_64BIT
-                        injectDll(ProcessId, DllPathForInjection);
+                        InjectDll(ProcessId, DllPathForInjection);
 #endif
                     }
 

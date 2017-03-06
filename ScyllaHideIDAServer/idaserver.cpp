@@ -278,7 +278,7 @@ static void handleClient(SOCKET ClientSocket)
                     once = true;
                 }
 
-                injectDll(ProcessId, idaExchange.DllPathForInjection);
+                InjectDll(ProcessId, idaExchange.DllPathForInjection);
                 break;
             }
             }

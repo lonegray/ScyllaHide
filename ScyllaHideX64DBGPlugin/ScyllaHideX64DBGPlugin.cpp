@@ -95,7 +95,7 @@ static void cbMenuEntry(CBTYPE cbType, void* callbackInfo)
         if (ProcessId) {
             wchar_t dllPath[MAX_PATH] = {};
             if (scl::GetFileDialogW(dllPath, _countof(dllPath)))
-                injectDll(ProcessId, dllPath);
+                InjectDll(ProcessId, dllPath);
         }
         break;
     }
