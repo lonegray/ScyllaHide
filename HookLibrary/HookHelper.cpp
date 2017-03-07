@@ -2,9 +2,9 @@
 
 #include <tlhelp32.h>
 #include <ntdllext/ntdllext.h>
+#include <Scylla/Hook.h>
 
 #include "HookedFunctions.h"
-#include "HookMain.h"
 #include "PebHider.h"
 
 const WCHAR * BadProcessnameList[] =
@@ -537,7 +537,7 @@ void DumpMalware(DWORD dwProcessId)
 					if (tempMem)
 					{
 						ReadProcessMemory(hProcess,(void *)imagebase, tempMem, pNt->OptionalHeader.SizeOfImage, 0);
-						
+
 						WriteMalwareToDisk(tempMem, pNt->OptionalHeader.SizeOfImage, imagebase);
 
 						VirtualFree(tempMem, 0, MEM_RELEASE);

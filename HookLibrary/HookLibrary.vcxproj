@@ -151,7 +151,6 @@
     <ClInclude Include="Hook.h" />
     <ClInclude Include="HookedFunctions.h" />
     <ClInclude Include="HookHelper.h" />
-    <ClInclude Include="HookMain.h" />
     <ClInclude Include="PebHider.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -5,16 +5,15 @@
 #include <cstring>
 
 #include <Scylla/DynamicMapping.h>
+#include <Scylla/Hook.h>
 #include <Scylla/Logger.h>
 #include <Scylla/NtApiLoader.h>
 #include <Scylla/PebHider.h>
 #include <Scylla/Settings.h>
 #include <Scylla/Util.h>
 
-#include "..\HookLibrary\HookMain.h"
 #include "ApplyHooking.h"
 #include "../PluginGeneric/Injector.h"
-
 
 scl::Settings g_settings;
 scl::Logger g_log;
@@ -22,7 +21,6 @@ std::wstring g_ntApiCollectionIniPath;
 std::wstring g_scyllaHideIniPath;
 
 HOOK_DLL_DATA g_hdd;
-
 
 void ChangeBadWindowText();
 void ReadSettings();

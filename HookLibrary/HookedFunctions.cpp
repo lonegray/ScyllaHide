@@ -1,12 +1,12 @@
-#include "HookMain.h"
 #include <intrin.h>
+#include <Scylla/Hook.h>
+
+#include "HookedFunctions.h"
+#include "HookHelper.h"
 
 #pragma intrinsic(_ReturnAddress)
 
 HOOK_DLL_DATA HookDllData = { 0 };
-
-#include "HookedFunctions.h"
-#include "HookHelper.h"
 
 void FakeCurrentParentProcessId(PSYSTEM_PROCESS_INFORMATION pInfo);
 void FilterProcess(PSYSTEM_PROCESS_INFORMATION pInfo);

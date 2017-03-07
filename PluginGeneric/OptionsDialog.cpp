@@ -3,6 +3,7 @@
 #include <codecvt>
 #include <locale>
 #include <Scylla/OsInfo.h>
+#include <Scylla/Scylla.h>
 #include <Scylla/Settings.h>
 #include <Scylla/Util.h>
 #include <Scylla/Version.h>
@@ -837,7 +838,7 @@ INT_PTR CALLBACK OptionsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
                     else
                     {
 #ifndef BUILD_IDA_64BIT
-                        scl::InjectDll(ProcessId, DllPathForInjection, g_settings.opts().dllStealth, g_settings.opts().dllUnload);
+                        scl::InjectDll(ProcessId, DllPathForInjection, !!g_settings.opts().dllStealth, !!g_settings.opts().dllUnload);
 #endif
                     }
 

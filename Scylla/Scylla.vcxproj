@@ -35,6 +35,7 @@
     <ClInclude Include="dbghelp.h" />
     <ClInclude Include="DllInject.h" />
     <ClInclude Include="DynamicMapping.h" />
+    <ClInclude Include="Hook.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="NtApiLoader.h" />
     <ClInclude Include="NtApiShim.h" />

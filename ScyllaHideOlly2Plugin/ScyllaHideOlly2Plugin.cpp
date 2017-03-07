@@ -136,7 +136,7 @@ static int MinjectDll(t_table *pt, wchar_t *name, ulong index, int mode)
     {
         wchar_t dllPath[MAX_PATH] = {};
         if (scl::GetFileDialogW(dllPath, _countof(dllPath)))
-            scl::InjectDll(ProcessId, dllPath, g_settings.opts().dllStealth, g_settings.opts().dllUnload);
+            scl::InjectDll(ProcessId, dllPath, !!g_settings.opts().dllStealth, !!g_settings.opts().dllUnload);
 
         return MENU_REDRAW;
     };
