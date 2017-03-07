@@ -19,10 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DllInject.cpp" />
     <ClCompile Include="DynamicMapping.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="NtApiLoader.cpp" />
     <ClCompile Include="PebHider.cpp" />
+    <ClCompile Include="Scylla.cpp" />
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="OsInfo.cpp" />
     <ClCompile Include="Peb.cpp" />
@@ -31,12 +33,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dbghelp.h" />
+    <ClInclude Include="DllInject.h" />
     <ClInclude Include="DynamicMapping.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="NtApiLoader.h" />
     <ClInclude Include="NtApiShim.h" />
     <ClInclude Include="PebHider.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="Scylla.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="OsInfo.h" />
     <ClInclude Include="Peb.h" />

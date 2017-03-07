@@ -259,3 +259,11 @@ bool scl::ReadFileContents(const wchar_t *filepath, std::basic_string<BYTE> &buf
     buf.resize((DWORD)size.QuadPart);
     return ReadFile(hFile.get(), &buf[0], (DWORD)buf.size(), nullptr, nullptr) == TRUE;
 }
+
+void scl::WaitThreadEnd(HANDLE hThread)
+{
+    SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL);
+    NtSetInformationThread(hThread, ThreadHideFromDebugger, nullptr, 0);
+    ResumeThread(hThread);
+    WaitForSingleObject(hThread, INFINITE);
+}

@@ -4,6 +4,7 @@
 #include <Scylla/Logger.h>
 #include <Scylla/NtApiLoader.h>
 #include <Scylla/OsInfo.h>
+#include <Scylla/Scylla.h>
 #include <Scylla/Settings.h>
 #include <Scylla/Util.h>
 #include <Scylla/Version.h>
@@ -15,7 +16,6 @@
 
 #include "resource.h"
 #include "olly1patches.h"
-
 
 #pragma comment(lib, "ollydbg1\\ollydbg.lib")
 
@@ -324,7 +324,7 @@ extern "C" void DLL_EXPORT _ODBG_Pluginaction(int origin, int action, void *item
             if (ProcessId) {
                 wchar_t dllPath[MAX_PATH] = {};
                 if (scl::GetFileDialogW(dllPath, _countof(dllPath)))
-                    InjectDll(ProcessId, dllPath);
+                    scl::InjectDll(ProcessId, dllPath, g_settings.opts().dllStealth, g_settings.opts().dllUnload);
             }
             break;
         }
@@ -445,7 +445,7 @@ extern "C" void DLL_EXPORT _ODBG_Pluginmainloop(DEBUG_EVENT *debugevent)
         {
             // Attach to an existing process.
             if (g_settings.opts().killAntiAttach)
-                ApplyAntiAntiAttach(ProcessId);
+                scl::KillAntiAttach(ProcessId);
         }
 
         ZeroMemory(&g_hdd, sizeof(HOOK_DLL_DATA));

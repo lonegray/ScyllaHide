@@ -6,6 +6,7 @@
 #include <Scylla/Logger.h>
 #include <Scylla/NtApiLoader.h>
 #include <Scylla/OsInfo.h>
+#include <Scylla/Scylla.h>
 #include <Scylla/Settings.h>
 #include <Scylla/Util.h>
 #include <Scylla/Version.h>
@@ -15,6 +16,7 @@
 #include "..\PluginGeneric\AttachDialog.h"
 
 #include "resource.h"
+
 
 #pragma comment(lib, "ollydbg2\\ollydbg.lib")
 
@@ -134,7 +136,7 @@ static int MinjectDll(t_table *pt, wchar_t *name, ulong index, int mode)
     {
         wchar_t dllPath[MAX_PATH] = {};
         if (scl::GetFileDialogW(dllPath, _countof(dllPath)))
-            InjectDll(ProcessId, dllPath);
+            scl::InjectDll(ProcessId, dllPath, g_settings.opts().dllStealth, g_settings.opts().dllUnload);
 
         return MENU_REDRAW;
     };
@@ -350,7 +352,7 @@ extc void ODBG2_Pluginmainloop(DEBUG_EVENT *debugevent)
         {
             // Attach to an existing process.
             if (g_settings.opts().killAntiAttach)
-                ApplyAntiAntiAttach(ProcessId);
+                scl::KillAntiAttach(ProcessId);
         }
 
         //change olly caption again !

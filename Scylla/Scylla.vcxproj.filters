@@ -42,6 +42,12 @@
     <ClCompile Include="DynamicMapping.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Scylla.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DllInject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Util.h">
@@ -78,6 +84,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DynamicMapping.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Scylla.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DllInject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

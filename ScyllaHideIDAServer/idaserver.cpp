@@ -2,6 +2,7 @@
 #include <Scylla/Logger.h>
 #include <Scylla/NtApiLoader.h>
 #include <Scylla/OsInfo.h>
+#include <Scylla/Scylla.h>
 #include <Scylla/Settings.h>
 #include <Scylla/Util.h>
 #include <Scylla/Version.h>
@@ -278,7 +279,7 @@ static void handleClient(SOCKET ClientSocket)
                     once = true;
                 }
 
-                InjectDll(ProcessId, idaExchange.DllPathForInjection);
+                scl::InjectDll(ProcessId, idaExchange.DllPathForInjection, !!g_settings.opts().dllStealth, !!g_settings.opts().dllUnload);
                 break;
             }
             }

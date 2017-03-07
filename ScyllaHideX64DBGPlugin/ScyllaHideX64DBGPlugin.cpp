@@ -2,6 +2,7 @@
 #include <Scylla/Logger.h>
 #include <Scylla/NtApiLoader.h>
 #include <Scylla/OsInfo.h>
+#include <Scylla/Scylla.h>
 #include <Scylla/Settings.h>
 #include <Scylla/Util.h>
 #include <Scylla/Version.h>
@@ -12,7 +13,6 @@
 #include "..\PluginGeneric\AttachDialog.h"
 
 #include "resource.h"
-
 
 #ifdef _WIN64
 #pragma comment(lib, "x64dbg\\x64dbg.lib")
@@ -95,7 +95,7 @@ static void cbMenuEntry(CBTYPE cbType, void* callbackInfo)
         if (ProcessId) {
             wchar_t dllPath[MAX_PATH] = {};
             if (scl::GetFileDialogW(dllPath, _countof(dllPath)))
-                InjectDll(ProcessId, dllPath);
+                scl::InjectDll(ProcessId, dllPath, !!g_settings.opts().dllStealth, !!g_settings.opts().dllUnload);
         }
         break;
     }
@@ -160,7 +160,7 @@ static void cbDebugloop(CBTYPE cbType, void* callbackInfo)
         {
             // Attach to an existing process.
             if (g_settings.opts().killAntiAttach)
-                ApplyAntiAntiAttach(ProcessId);
+                scl::KillAntiAttach(ProcessId);
         }
 
         break;

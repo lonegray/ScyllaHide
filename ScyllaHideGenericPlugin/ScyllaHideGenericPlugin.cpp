@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <Scylla/Logger.h>
 #include <Scylla/NtApiLoader.h>
+#include <Scylla/Scylla.h>
 #include <Scylla/Settings.h>
 #include <Scylla/Util.h>
 
@@ -84,7 +85,7 @@ DLL_EXPORT void ScyllaHideDebugLoop(const DEBUG_EVENT* DebugEvent)
         {
             // Attach to an existing process.
             if (g_settings.opts().killAntiAttach)
-                ApplyAntiAntiAttach(status.ProcessId);
+                scl::KillAntiAttach(status.ProcessId);
         }
 
         break;

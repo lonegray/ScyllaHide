@@ -82,4 +82,6 @@ namespace scl
     HMODULE GetRemoteModuleHandleW(HANDLE hProcess, const wchar_t *module_name);
 
     bool ReadFileContents(const wchar_t *filepath, std::basic_string<BYTE> &buf);
+
+    void WaitThreadEnd(HANDLE hThread);
 };
