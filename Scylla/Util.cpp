@@ -204,16 +204,16 @@ bool scl::Wow64WriteProcessMemory64(HANDLE hProcess, PVOID64 address, LPCVOID bu
 HMODULE scl::GetRemoteModuleHandleW(HANDLE hProcess, const wchar_t *module_name)
 {
     std::vector<HMODULE> hMods(1);
-    DWORD buf_size = hMods.size() * sizeof(HMODULE);
+    DWORD buf_size = 0;
 
-    if (!EnumProcessModules(hProcess, &hMods[0], hMods.size() * sizeof(HMODULE), &buf_size))
+    if (!EnumProcessModules(hProcess, &hMods[0], (DWORD)hMods.size() * sizeof(HMODULE), &buf_size))
         return nullptr;
 
     if ((hMods.size() * sizeof(HMODULE)) < buf_size)
     {
         hMods.resize(buf_size / sizeof(HMODULE));
 
-        if (!EnumProcessModules(hProcess, &hMods[0], hMods.size() * sizeof(HMODULE), &buf_size))
+        if (!EnumProcessModules(hProcess, &hMods[0], (DWORD)hMods.size() * sizeof(HMODULE), &buf_size))
             return nullptr;
     }
 

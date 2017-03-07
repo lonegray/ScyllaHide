@@ -1890,7 +1890,7 @@ RtlProcessFlsData (
 
 NTSYSCALLAPI
 VOID
-WINAPI
+__cdecl
 RtlRestoreContext (
 	_In_  PCONTEXT ContextRecord,
 	_In_  PEXCEPTION_RECORD ExceptionRecord
