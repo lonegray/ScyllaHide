@@ -2,9 +2,9 @@
 
 #include <Scylla/DynamicMapping.h>
 #include <Scylla/Logger.h>
-#include <Scylla/NtApiLoader.h>
 #include <Scylla/OsInfo.h>
 #include <Scylla/PebHider.h>
+#include <Scylla/Scylla.h>
 #include <Scylla/Settings.h>
 #include <Scylla/Util.h>
 
@@ -26,36 +26,6 @@ DWORD DbgUiRemoteBreakin_addr;
 BYTE* RemoteBreakinPatch;
 BYTE code[8];
 HANDLE hDebuggee;
-
-void ReadNtApiInformation(const wchar_t *file, HOOK_DLL_DATA *hde)
-{
-    scl::NtApiLoader api_loader;
-    auto res = api_loader.Load(file);
-    if (!res.first)
-    {
-        g_log.LogError(L"Failed to load NT API addresses: %s", res.second);
-        return;
-    }
-
-    hde->NtUserQueryWindowRVA = (DWORD)api_loader.get_fun(L"user32.dll", L"NtUserQueryWindow");
-    hde->NtUserBuildHwndListRVA = (DWORD)api_loader.get_fun(L"user32.dll", L"NtUserBuildHwndList");
-    hde->NtUserFindWindowExRVA = (DWORD)api_loader.get_fun(L"user32.dll", L"NtUserFindWindowEx");
-
-    g_log.LogInfo(L"Loaded RVA for user32.dll!NtUserQueryWindow = 0x%p", hde->NtUserQueryWindowRVA);
-    g_log.LogInfo(L"Loaded RVA for user32.dll!NtUserBuildHwndList = 0x%p", hde->NtUserBuildHwndListRVA);
-    g_log.LogInfo(L"Loaded RVA for user32.dll!NtUserFindWindowEx = 0x%p", hde->NtUserFindWindowExRVA);
-
-    if (!hde->NtUserQueryWindowRVA || !hde->NtUserBuildHwndListRVA || !hde->NtUserFindWindowExRVA)
-    {
-        g_log.LogError(
-            L"NtUser* API Addresses are missing!\n"
-            L"File: %s\n"
-            L"Section: %s\n"
-            L"Please read the documentation to fix this problem!",
-            file, api_loader.GetOsId().c_str()
-        );
-    }
-}
 
 #ifndef _WIN64
 void __declspec(naked) handleAntiAttach()
@@ -185,7 +155,7 @@ void startInjectionProcess(HANDLE hProcess, HOOK_DLL_DATA *hdd, BYTE * dllMemory
         remoteImageBase = scl::MapModuleToProcess(hProcess, dllMemory).first;
         if (remoteImageBase)
         {
-            FillHookDllData(hProcess, hdd);
+            scl::InitHookDllData(hdd, hProcess, g_settings);
 
 
             StartHooking(hProcess, hdd, dllMemory, (DWORD_PTR)remoteImageBase);
@@ -226,54 +196,6 @@ void startInjection(DWORD targetPid, HOOK_DLL_DATA *hdd, const WCHAR * dllPath, 
     {
         g_log.LogError(L"Cannot open process handle %d", targetPid);
     }
-}
-
-void FillHookDllData(HANDLE hProcess, HOOK_DLL_DATA *hdd)
-{
-    HMODULE localKernel = GetModuleHandleW(L"kernel32.dll");
-    HMODULE localKernelbase = GetModuleHandleW(L"kernelbase.dll");
-    HMODULE localNtdll = GetModuleHandleW(L"ntdll.dll");
-
-    hdd->hNtdll = scl::GetRemoteModuleHandleW(hProcess, L"ntdll.dll");
-    hdd->hkernel32 = scl::GetRemoteModuleHandleW(hProcess, L"kernel32.dll");
-    hdd->hkernelBase = scl::GetRemoteModuleHandleW(hProcess, L"kernelbase.dll");
-    hdd->hUser32 = scl::GetRemoteModuleHandleW(hProcess, L"user32.dll");
-
-    hdd->EnablePebBeingDebugged = g_settings.opts().fixPebBeingDebugged;
-    hdd->EnablePebHeapFlags = g_settings.opts().fixPebHeapFlags;
-    hdd->EnablePebNtGlobalFlag = g_settings.opts().fixPebNtGlobalFlag;
-    hdd->EnablePebStartupInfo = g_settings.opts().fixPebStartupInfo;
-    hdd->EnableBlockInputHook = g_settings.opts().hookBlockInput;
-    hdd->EnableOutputDebugStringHook = g_settings.opts().hookOutputDebugStringA;
-    hdd->EnableNtSetInformationThreadHook = g_settings.opts().hookNtSetInformationThread;
-    hdd->EnableNtQueryInformationProcessHook = g_settings.opts().hookNtQueryInformationProcess;
-    hdd->EnableNtQuerySystemInformationHook = g_settings.opts().hookNtQuerySystemInformation;
-    hdd->EnableNtQueryObjectHook = g_settings.opts().hookNtQueryObject;
-    hdd->EnableNtYieldExecutionHook = g_settings.opts().hookNtYieldExecution;
-    hdd->EnableNtCloseHook = g_settings.opts().hookNtClose;
-    hdd->EnableNtCreateThreadExHook = g_settings.opts().hookNtCreateThreadEx;
-    hdd->EnablePreventThreadCreation = g_settings.opts().preventThreadCreation;
-    hdd->EnableNtUserFindWindowExHook = g_settings.opts().hookNtUserFindWindowEx;
-    hdd->EnableNtUserBuildHwndListHook = g_settings.opts().hookNtUserBuildHwndList;
-    hdd->EnableNtUserQueryWindowHook = g_settings.opts().hookNtUserQueryWindow;
-    hdd->EnableNtSetDebugFilterStateHook = g_settings.opts().hookNtSetDebugFilterState;
-    hdd->EnableGetTickCountHook = g_settings.opts().hookGetTickCount;
-    hdd->EnableGetTickCount64Hook = g_settings.opts().hookGetTickCount64;
-    hdd->EnableGetLocalTimeHook = g_settings.opts().hookGetLocalTime;
-    hdd->EnableGetSystemTimeHook = g_settings.opts().hookGetSystemTime;
-    hdd->EnableNtQuerySystemTimeHook = g_settings.opts().hookNtQuerySystemTime;
-    hdd->EnableNtQueryPerformanceCounterHook = g_settings.opts().hookNtQueryPerformanceCounter;
-    hdd->EnableNtSetInformationProcessHook = g_settings.opts().hookNtSetInformationProcess;
-
-    hdd->EnableNtGetContextThreadHook = g_settings.opts().hookNtGetContextThread;
-    hdd->EnableNtSetContextThreadHook = g_settings.opts().hookNtSetContextThread;
-    hdd->EnableNtContinueHook = g_settings.opts().hookNtContinue | g_settings.opts().killAntiAttach;
-    hdd->EnableKiUserExceptionDispatcherHook = g_settings.opts().hookKiUserExceptionDispatcher;
-    hdd->EnableMalwareRunPeUnpacker = g_settings.opts().malwareRunpeUnpacker;
-
-    hdd->isKernel32Hooked = FALSE;
-    hdd->isNtdllHooked = FALSE;
-    hdd->isUser32Hooked = FALSE;
 }
 
 bool RemoveDebugPrivileges(HANDLE hProcess)

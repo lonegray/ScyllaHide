@@ -181,7 +181,7 @@ static void cbDebugloop(CBTYPE cbType, void* callbackInfo)
         {
             if (!bHooked)
             {
-                ReadNtApiInformation(g_ntApiCollectionIniPath.c_str(), &g_hdd);
+                scl::ReadNtApiInformation(g_ntApiCollectionIniPath.c_str(), &g_hdd);
 
                 bHooked = true;
                 startInjection(ProcessId, &g_hdd, g_scyllaHideDllPath.c_str(), true);

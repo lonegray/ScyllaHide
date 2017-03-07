@@ -1,10 +1,12 @@
 #include <Windows.h>
+#include <titan/TitanEngine.h>
+
 #include <Scylla/Logger.h>
 #include <Scylla/NtApiLoader.h>
+#include <Scylla/Scylla.h>
 #include <Scylla/Settings.h>
 #include <Scylla/Version.h>
 #include <Scylla/Util.h>
-#include <titan/TitanEngine.h>
 
 #include "..\PluginGeneric\Injector.h"
 
@@ -87,7 +89,7 @@ extern "C" DLL_EXPORT void TitanDebuggingCallBack(LPDEBUG_EVENT debugEvent, int 
             {
                 if (!bHooked)
                 {
-                    ReadNtApiInformation(g_ntApiCollectionIniPath.c_str(), &g_hdd);
+                    scl::ReadNtApiInformation(g_ntApiCollectionIniPath.c_str(), &g_hdd);
 
                     bHooked = true;
                     startInjection(ProcessId, &g_hdd, g_scyllaHideDllPath.c_str(), true);

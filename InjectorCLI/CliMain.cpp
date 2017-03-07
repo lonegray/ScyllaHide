@@ -9,11 +9,11 @@
 #include <Scylla/Logger.h>
 #include <Scylla/NtApiLoader.h>
 #include <Scylla/PebHider.h>
+#include <Scylla/Scylla.h>
 #include <Scylla/Settings.h>
 #include <Scylla/Util.h>
 
 #include "ApplyHooking.h"
-#include "../PluginGeneric/Injector.h"
 
 scl::Settings g_settings;
 scl::Logger g_log;
@@ -53,7 +53,7 @@ int wmain(int argc, wchar_t* argv[])
     g_log.SetLogCb(scl::Logger::Info, LogCallback);
     g_log.SetLogCb(scl::Logger::Error, LogCallback);
 
-    ReadNtApiInformation(g_ntApiCollectionIniPath.c_str(), &g_hdd);
+    scl::ReadNtApiInformation(g_ntApiCollectionIniPath.c_str(), &g_hdd);
     SetDebugPrivileges();
     //ChangeBadWindowText();
     g_settings.Load(g_scyllaHideIniPath.c_str());
@@ -108,7 +108,7 @@ void startInjectionProcess(HANDLE hProcess, BYTE * dllMemory)
 
     if (remoteImageBase)
     {
-        FillHookDllData(hProcess, &g_hdd);
+        scl::InitHookDllData(&g_hdd, hProcess, g_settings);
 
         DWORD hookDllDataAddressRva = scl::GetDllFunctionAddressRva(dllMemory, "HookDllData");
 

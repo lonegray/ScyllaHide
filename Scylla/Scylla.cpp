@@ -2,9 +2,40 @@
 
 #include "DllInject.h"
 #include "Logger.h"
+#include "NtApiLoader.h"
 #include "Util.h"
 
 extern scl::Logger g_log;
+
+void scl::ReadNtApiInformation(const wchar_t *file, HOOK_DLL_DATA *hde)
+{
+    scl::NtApiLoader api_loader;
+    auto res = api_loader.Load(file);
+    if (!res.first)
+    {
+        g_log.LogError(L"Failed to load NT API addresses: %s", res.second);
+        return;
+    }
+
+    hde->NtUserQueryWindowRVA = (DWORD)api_loader.get_fun(L"user32.dll", L"NtUserQueryWindow");
+    hde->NtUserBuildHwndListRVA = (DWORD)api_loader.get_fun(L"user32.dll", L"NtUserBuildHwndList");
+    hde->NtUserFindWindowExRVA = (DWORD)api_loader.get_fun(L"user32.dll", L"NtUserFindWindowEx");
+
+    g_log.LogInfo(L"Loaded RVA for user32.dll!NtUserQueryWindow = 0x%p", hde->NtUserQueryWindowRVA);
+    g_log.LogInfo(L"Loaded RVA for user32.dll!NtUserBuildHwndList = 0x%p", hde->NtUserBuildHwndListRVA);
+    g_log.LogInfo(L"Loaded RVA for user32.dll!NtUserFindWindowEx = 0x%p", hde->NtUserFindWindowExRVA);
+
+    if (!hde->NtUserQueryWindowRVA || !hde->NtUserBuildHwndListRVA || !hde->NtUserFindWindowExRVA)
+    {
+        g_log.LogError(
+            L"NtUser* API Addresses are missing!\n"
+            L"File: %s\n"
+            L"Section: %s\n"
+            L"Please read the documentation to fix this problem!",
+            file, api_loader.GetOsId().c_str()
+            );
+    }
+}
 
 void scl::InjectDll(DWORD pid, const wchar_t *dll_path, bool stealth, bool unload)
 {
@@ -112,4 +143,50 @@ void scl::KillAntiAttach(DWORD pid)
             continue;
         }
     }
+}
+
+void scl::InitHookDllData(HOOK_DLL_DATA *hdd, HANDLE hProcess, const Settings &settings)
+{
+    // TODO: inspect this function.
+
+    hdd->hNtdll = GetRemoteModuleHandleW(hProcess, L"ntdll.dll");
+    hdd->hkernel32 = GetRemoteModuleHandleW(hProcess, L"kernel32.dll");
+    hdd->hkernelBase = GetRemoteModuleHandleW(hProcess, L"kernelbase.dll");
+    hdd->hUser32 = GetRemoteModuleHandleW(hProcess, L"user32.dll");
+
+    hdd->EnablePebBeingDebugged = settings.opts().fixPebBeingDebugged;
+    hdd->EnablePebHeapFlags = settings.opts().fixPebHeapFlags;
+    hdd->EnablePebNtGlobalFlag = settings.opts().fixPebNtGlobalFlag;
+    hdd->EnablePebStartupInfo = settings.opts().fixPebStartupInfo;
+    hdd->EnableBlockInputHook = settings.opts().hookBlockInput;
+    hdd->EnableOutputDebugStringHook = settings.opts().hookOutputDebugStringA;
+    hdd->EnableNtSetInformationThreadHook = settings.opts().hookNtSetInformationThread;
+    hdd->EnableNtQueryInformationProcessHook = settings.opts().hookNtQueryInformationProcess;
+    hdd->EnableNtQuerySystemInformationHook = settings.opts().hookNtQuerySystemInformation;
+    hdd->EnableNtQueryObjectHook = settings.opts().hookNtQueryObject;
+    hdd->EnableNtYieldExecutionHook = settings.opts().hookNtYieldExecution;
+    hdd->EnableNtCloseHook = settings.opts().hookNtClose;
+    hdd->EnableNtCreateThreadExHook = settings.opts().hookNtCreateThreadEx;
+    hdd->EnablePreventThreadCreation = settings.opts().preventThreadCreation;
+    hdd->EnableNtUserFindWindowExHook = settings.opts().hookNtUserFindWindowEx;
+    hdd->EnableNtUserBuildHwndListHook = settings.opts().hookNtUserBuildHwndList;
+    hdd->EnableNtUserQueryWindowHook = settings.opts().hookNtUserQueryWindow;
+    hdd->EnableNtSetDebugFilterStateHook = settings.opts().hookNtSetDebugFilterState;
+    hdd->EnableGetTickCountHook = settings.opts().hookGetTickCount;
+    hdd->EnableGetTickCount64Hook = settings.opts().hookGetTickCount64;
+    hdd->EnableGetLocalTimeHook = settings.opts().hookGetLocalTime;
+    hdd->EnableGetSystemTimeHook = settings.opts().hookGetSystemTime;
+    hdd->EnableNtQuerySystemTimeHook = settings.opts().hookNtQuerySystemTime;
+    hdd->EnableNtQueryPerformanceCounterHook = settings.opts().hookNtQueryPerformanceCounter;
+    hdd->EnableNtSetInformationProcessHook = settings.opts().hookNtSetInformationProcess;
+
+    hdd->EnableNtGetContextThreadHook = settings.opts().hookNtGetContextThread;
+    hdd->EnableNtSetContextThreadHook = settings.opts().hookNtSetContextThread;
+    hdd->EnableNtContinueHook = settings.opts().hookNtContinue | settings.opts().killAntiAttach;
+    hdd->EnableKiUserExceptionDispatcherHook = settings.opts().hookKiUserExceptionDispatcher;
+    hdd->EnableMalwareRunPeUnpacker = settings.opts().malwareRunpeUnpacker;
+
+    hdd->isKernel32Hooked = FALSE;
+    hdd->isNtdllHooked = FALSE;
+    hdd->isUser32Hooked = FALSE;
 }
