@@ -5,7 +5,6 @@
 #include <Scylla/Hook.h>
 
 #include "HookedFunctions.h"
-#include "PebHider.h"
 
 const WCHAR * BadProcessnameList[] =
 {
@@ -519,12 +518,15 @@ void DumpMalware(DWORD dwProcessId)
 	HANDLE hProcess = OpenProcess(PROCESS_VM_READ|PROCESS_QUERY_INFORMATION, 0, dwProcessId);
 	if (hProcess)
 	{
-		PEB_CURRENT * peb = (PEB_CURRENT *)GetPEBRemote(hProcess);
+		void *peb = GetPEBRemote(hProcess);
 		if (peb)
 		{
 			DWORD_PTR imagebase = 0;
-			ReadProcessMemory(hProcess, (void *)&peb->ImageBaseAddress, &imagebase, sizeof(DWORD_PTR), 0);
-
+#ifndef _WIN64
+			ReadProcessMemory(hProcess, (LPVOID)((DWORD_PTR)peb + 0x0008), &imagebase, sizeof(DWORD_PTR), 0);
+#else
+            ReadProcessMemory(hProcess, (LPVOID)((DWORD_PTR)peb + 0x0010), &imagebase, sizeof(DWORD_PTR), 0);
+#endif
 			ReadProcessMemory(hProcess, (void *)imagebase, memory, sizeof(memory), 0);
 
 			PIMAGE_DOS_HEADER pDos = (PIMAGE_DOS_HEADER)memory;
