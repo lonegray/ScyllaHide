@@ -68,48 +68,41 @@ static void LogCallback(const char *msg)
     _plugin_logprintf("[%s] %s\n", SCYLLA_HIDE_NAME_A, msg);
 }
 
-static void AttachProcess(DWORD dwPID)
+static void AttachProcess(DWORD pid)
 {
     char cmd[30] = { 0 };
-    wsprintfA(cmd, "attach %x", dwPID);
+    wsprintfA(cmd, "attach %x", pid);
     if (!DbgCmdExec(cmd))
     {
-        MessageBoxW(hwndDlg,
-            L"Can't attach to that process !",
-            L"ScyllaHide Plugin", MB_OK | MB_ICONERROR);
+        MessageBoxW(hwndDlg, L"Can't attach to that process!", L"ScyllaHide Plugin", MB_ICONERROR);
     }
 }
 
-static void cbMenuEntry(CBTYPE cbType, void* callbackInfo)
+static void cbMenuEntry(CBTYPE cb_type, void* cb_info)
 {
-    PLUG_CB_MENUENTRY* info = (PLUG_CB_MENUENTRY*)callbackInfo;
+    auto info = (PLUG_CB_MENUENTRY *)cb_info;
     switch (info->hEntry)
     {
     case MENU_OPTIONS:
-    {
         DialogBoxW(hinst, MAKEINTRESOURCE(IDD_OPTIONS), hwndDlg, &OptionsDlgProc);
         break;
-    }
+
     case MENU_INJECTDLL:
-    {
         if (ProcessId) {
             wchar_t dllPath[MAX_PATH] = {};
             if (scl::GetFileDialogW(dllPath, _countof(dllPath)))
                 scl::InjectDll(ProcessId, dllPath, !!g_settings.opts().dllStealth, !!g_settings.opts().dllUnload);
         }
         break;
-    }
-    case MENU_ATTACH:
-    {
-        DialogBox(hinst, MAKEINTRESOURCE(IDD_ATTACH), hwndDlg, &AttachProc);
-        break;
-    }
-    case MENU_ABOUT:
-    {
-        scl::ShowAboutBox(hwndDlg);
 
+    case MENU_ATTACH:
+        DialogBoxW(hinst, MAKEINTRESOURCE(IDD_ATTACH), hwndDlg, &AttachProc);
         break;
-    }
+
+    case MENU_ABOUT:
+        scl::ShowAboutBox(hwndDlg);
+        break;
+
     default: {
         auto profile_name = g_settings.profile_names()[info->hEntry - MENU_MAX].c_str();
         g_settings.SetProfile(profile_name);
@@ -118,20 +111,20 @@ static void cbMenuEntry(CBTYPE cbType, void* callbackInfo)
         {
             startInjection(ProcessId, &g_hdd, g_scyllaHideDllPath.c_str(), true);
             bHooked = true;
-            MessageBoxA(hwndDlg, "Applied changes! Restarting target is NOT necessary!", "[ScyllaHide Options]", MB_OK | MB_ICONINFORMATION);
+            MessageBoxW(hwndDlg, L"Applied changes! Restarting target is NOT necessary!", L"[ScyllaHide Options]", MB_ICONINFORMATION);
         }
         else
         {
-            MessageBoxA(hwndDlg, "Please start the target to apply changes!", "[ScyllaHide Options]", MB_OK | MB_ICONINFORMATION);
+            MessageBoxW(hwndDlg, L"Please start the target to apply changes!", L"[ScyllaHide Options]", MB_ICONINFORMATION);
         }
         break;
     }
     }
 }
 
-static void cbDebugloop(CBTYPE cbType, void* callbackInfo)
+static void cbDebugloop(CBTYPE cb_type, void* cb_info)
 {
-    PLUG_CB_DEBUGEVENT* d = (PLUG_CB_DEBUGEVENT*)callbackInfo;
+    auto event = ((PLUG_CB_DEBUGEVENT *)cb_info)->DebugEvent;
 
     if (g_settings.opts().fixPebHeapFlags)
     {
@@ -141,22 +134,21 @@ static void cbDebugloop(CBTYPE cbType, void* callbackInfo)
             specialPebFix = false;
         }
 
-        if (d->DebugEvent->u.LoadDll.lpBaseOfDll == hNtdllModule)
+        if (event->u.LoadDll.lpBaseOfDll == hNtdllModule)
         {
             scl::SetPebBeingDebugged(ProcessId, false);
             specialPebFix = true;
         }
     }
 
-    switch (d->DebugEvent->dwDebugEventCode)
+    switch (event->dwDebugEventCode)
     {
     case CREATE_PROCESS_DEBUG_EVENT:
-    {
-        ProcessId = d->DebugEvent->dwProcessId;
+        ProcessId = event->dwProcessId;
         bHooked = false;
         ZeroMemory(&g_hdd, sizeof(HOOK_DLL_DATA));
 
-        if (d->DebugEvent->u.CreateProcessInfo.lpStartAddress == NULL)
+        if (event->u.CreateProcessInfo.lpStartAddress == nullptr)
         {
             // Attach to an existing process.
             if (g_settings.opts().killAntiAttach)
@@ -164,21 +156,18 @@ static void cbDebugloop(CBTYPE cbType, void* callbackInfo)
         }
 
         break;
-    }
+
     case LOAD_DLL_DEBUG_EVENT:
-    {
         if (bHooked)
         {
             startInjection(ProcessId, &g_hdd, g_scyllaHideDllPath.c_str(), false);
         }
         break;
-    }
+
     case EXCEPTION_DEBUG_EVENT:
-    {
-        switch (d->DebugEvent->u.Exception.ExceptionRecord.ExceptionCode)
+        switch (event->u.Exception.ExceptionRecord.ExceptionCode)
         {
         case STATUS_BREAKPOINT:
-        {
             if (!bHooked)
             {
                 scl::ReadNtApiInformation(g_ntApiCollectionIniPath.c_str(), &g_hdd);
@@ -186,18 +175,19 @@ static void cbDebugloop(CBTYPE cbType, void* callbackInfo)
                 bHooked = true;
                 startInjection(ProcessId, &g_hdd, g_scyllaHideDllPath.c_str(), true);
             }
+            break;
 
+        default:
             break;
         }
-
-        }
-
         break;
-    }
+
+    default:
+        break;
     }
 }
 
-static void cbReset(CBTYPE cbType, void* callbackInfo)
+static void cbReset(CBTYPE cb_type, void* cb_info)
 {
     ZeroMemory(&g_hdd, sizeof(HOOK_DLL_DATA));
     bHooked = false;
@@ -218,10 +208,10 @@ extern "C" DLL_EXPORT bool pluginit(PLUG_INITSTRUCT* initStruct)
     return true;
 }
 
-extern "C" DLL_EXPORT void plugsetup(PLUG_SETUPSTRUCT* setupStruct)
+extern "C" DLL_EXPORT void plugsetup(PLUG_SETUPSTRUCT* setup)
 {
-    hwndDlg = setupStruct->hwndDlg;
-    hMenu = setupStruct->hMenu;
+    hwndDlg = setup->hwndDlg;
+    hMenu = setup->hMenu;
 
     g_settings.Load(g_scyllaHideIniPath.c_str());
 
@@ -244,8 +234,7 @@ extern "C" DLL_EXPORT void plugsetup(PLUG_SETUPSTRUCT* setupStruct)
     _plugin_menuaddseparator(hMenu);
     _plugin_menuaddentry(hMenu, MENU_ABOUT, "&About");
 
-    //load png
-
+    // load png
     HRSRC hResPng = FindResourceW(hinst, MAKEINTRESOURCEW(IDB_GHOSTPNG), L"PNG");
     if (hResPng != NULL)
     {
@@ -257,7 +246,7 @@ extern "C" DLL_EXPORT void plugsetup(PLUG_SETUPSTRUCT* setupStruct)
 
             if (mainIconData.data != NULL && mainIconData.size != 0)
             {
-                _plugin_menuseticon(hMenu, (const ICONDATA *)&mainIconData);
+                _plugin_menuseticon(hMenu, (ICONDATA *)&mainIconData);
             }
             else
             {
