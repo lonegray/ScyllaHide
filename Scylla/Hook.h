@@ -3,7 +3,9 @@
 #include <Windows.h>
 #include <ntdll/ntdll.h>
 
+#ifdef __cplusplus
 extern "C" {
+#endif
 
 #define MAX_NATIVE_HOOKS 20
 
@@ -167,4 +169,6 @@ extern "C" {
 #define HOOK_ERROR_DLLMAIN 2
 #define HOOK_ERROR_PEHEADER 3
 
+#ifdef __cplusplus
 }
+#endif

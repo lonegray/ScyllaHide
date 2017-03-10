@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <ntdll/ntdll.h>
 
 bool IsValidHandle(HANDLE hHandle);

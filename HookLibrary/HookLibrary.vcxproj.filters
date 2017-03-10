@@ -15,16 +15,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Hook.cpp">
+    <ClCompile Include="HookHelper.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HookedFunctions.cpp">
+    <ClCompile Include="HookedFunctions.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HookHelper.cpp">
+    <ClCompile Include="Hook.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DllMain.cpp">
+    <ClCompile Include="DllMain.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

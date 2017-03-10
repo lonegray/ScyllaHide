@@ -2,12 +2,12 @@
 
 #ifdef _WIN64
 #pragma comment(lib, "LDE64\\LDE64x64.lib")
-extern "C" unsigned __fastcall LDE(LPCBYTE lpData, unsigned uArch);
+extern unsigned __fastcall LDE(LPCBYTE lpData, unsigned uArch);
 #define SCYLLA_LDE_ARCH     64
 #define SCYLLA_DETOUR_SIZE  (2 + sizeof(DWORD) + sizeof(DWORD_PTR)) // 2 + 4 + 8 = 14
 #else
 #pragma comment(lib, "LDE64\\LDE64.lib")
-extern "C" unsigned __stdcall LDE(LPCBYTE lpData, unsigned uArch);
+extern unsigned __stdcall LDE(LPCBYTE lpData, unsigned uArch);
 #define SCYLLA_LDE_ARCH 0
 #define SCYLLA_DETOUR_SIZE  (1 + sizeof(DWORD)) // 1 + 4 = 5
 #endif

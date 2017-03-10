@@ -138,10 +138,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Hook.cpp" />
-    <ClCompile Include="HookedFunctions.cpp" />
-    <ClCompile Include="HookHelper.cpp" />
-    <ClCompile Include="DllMain.cpp" />
+    <ClCompile Include="Hook.c" />
+    <ClCompile Include="HookedFunctions.c" />
+    <ClCompile Include="HookHelper.c" />
+    <ClCompile Include="DllMain.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Export.def" />
