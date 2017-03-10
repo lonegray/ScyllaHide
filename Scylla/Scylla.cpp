@@ -221,3 +221,24 @@ bool scl::SetPebBeingDebugged(DWORD pid, bool being_debugged)
 
     return true;
 }
+
+bool scl::RemoveDebugPrivileges(HANDLE hProcess)
+{
+    TOKEN_PRIVILEGES privs;
+
+    if (!LookupPrivilegeValueW(nullptr, SE_DEBUG_NAME, &privs.Privileges[0].Luid))
+        return false;
+
+    HANDLE hToken;
+    if (!OpenProcessToken(hProcess, TOKEN_ADJUST_PRIVILEGES, &hToken))
+        return false;
+
+    privs.Privileges[0].Attributes = 0;
+    privs.PrivilegeCount = 1;
+
+    AdjustTokenPrivileges(hToken, FALSE, &privs, 0, nullptr, nullptr);
+    CloseHandle(hToken);
+
+    return true;
+}
+

@@ -119,7 +119,7 @@ void startInjectionProcess(HANDLE hProcess, HOOK_DLL_DATA *hdd, BYTE * dllMemory
     {
         if (g_settings.opts().removeDebugPrivileges)
         {
-            RemoveDebugPrivileges(hProcess);
+            scl::RemoveDebugPrivileges(hProcess);
         }
 
         RestoreHooks(hdd, hProcess);
@@ -170,23 +170,4 @@ void startInjection(DWORD targetPid, HOOK_DLL_DATA *hdd, const WCHAR * dllPath, 
     }
 }
 
-bool RemoveDebugPrivileges(HANDLE hProcess)
-{
-    TOKEN_PRIVILEGES Debug_Privileges;
 
-    if (LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &Debug_Privileges.Privileges[0].Luid))
-    {
-        HANDLE hToken = 0;
-        if (OpenProcessToken(hProcess, TOKEN_ADJUST_PRIVILEGES, &hToken))
-        {
-            Debug_Privileges.Privileges[0].Attributes = 0;
-            Debug_Privileges.PrivilegeCount = 1;
-
-            AdjustTokenPrivileges(hToken, FALSE, &Debug_Privileges, 0, NULL, NULL);
-            CloseHandle(hToken);
-            return true;
-        }
-    }
-
-    return false;
-}

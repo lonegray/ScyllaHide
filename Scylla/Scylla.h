@@ -15,4 +15,6 @@ namespace scl
     void InitHookDllData(HOOK_DLL_DATA *hdd, HANDLE hProcess, const Settings &settings);
 
     bool SetPebBeingDebugged(DWORD pid, bool being_debugged);
+
+    bool RemoveDebugPrivileges(HANDLE hProcess);
 }
