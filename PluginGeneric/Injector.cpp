@@ -87,34 +87,6 @@ void InstallAntiAttachHook()
 #endif
 }
 
-bool StartFixBeingDebugged(DWORD targetPid, bool setToNull)
-{
-    scl::Handle hProcess(OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, targetPid));
-    if (!hProcess.get())
-        return false;
-
-    auto peb = scl::GetPeb(hProcess.get());
-    if (!peb)
-        return false;
-
-    peb->BeingDebugged = setToNull ? FALSE : TRUE;
-    if (!scl::SetPeb(hProcess.get(), peb.get()))
-        return false;
-
-    if (scl::IsWow64Process(hProcess.get()))
-    {
-        auto peb64 = scl::Wow64GetPeb64(hProcess.get());
-        if (!peb64)
-            return false;
-
-        peb->BeingDebugged = setToNull ? FALSE : TRUE;
-        if (!scl::Wow64SetPeb64(hProcess.get(), peb64.get()))
-            return false;
-    }
-
-    return true;
-}
-
 bool StartHooking(HANDLE hProcess, HOOK_DLL_DATA *hdd, BYTE * dllMemory, DWORD_PTR imageBase)
 {
     hdd->dwProtectedProcessId = GetCurrentProcessId(); //for olly plugins

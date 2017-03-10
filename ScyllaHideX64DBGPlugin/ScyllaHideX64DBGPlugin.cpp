@@ -137,13 +137,13 @@ static void cbDebugloop(CBTYPE cbType, void* callbackInfo)
     {
         if (specialPebFix)
         {
-            StartFixBeingDebugged(ProcessId, false);
+            scl::SetPebBeingDebugged(ProcessId, true);
             specialPebFix = false;
         }
 
         if (d->DebugEvent->u.LoadDll.lpBaseOfDll == hNtdllModule)
         {
-            StartFixBeingDebugged(ProcessId, true);
+            scl::SetPebBeingDebugged(ProcessId, false);
             specialPebFix = true;
         }
     }

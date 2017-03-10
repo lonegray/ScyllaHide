@@ -62,13 +62,13 @@ DLL_EXPORT void ScyllaHideDebugLoop(const DEBUG_EVENT* DebugEvent)
     {
         if (status.specialPebFix)
         {
-            StartFixBeingDebugged(status.ProcessId, false);
+            scl::SetPebBeingDebugged(status.ProcessId, true);
             status.specialPebFix = false;
         }
 
         if (DebugEvent->u.LoadDll.lpBaseOfDll == hNtdllModule)
         {
-            StartFixBeingDebugged(status.ProcessId, true);
+            scl::SetPebBeingDebugged(status.ProcessId, false);
             status.specialPebFix = true;
         }
     }

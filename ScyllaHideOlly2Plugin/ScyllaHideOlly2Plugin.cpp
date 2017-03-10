@@ -329,13 +329,13 @@ extc void ODBG2_Pluginmainloop(DEBUG_EVENT *debugevent)
     {
         if (specialPebFix)
         {
-            StartFixBeingDebugged(ProcessId, false);
+            scl::SetPebBeingDebugged(ProcessId, true);
             specialPebFix = false;
         }
 
         if (debugevent->u.LoadDll.lpBaseOfDll == hNtdllModule)
         {
-            StartFixBeingDebugged(ProcessId, true);
+            scl::SetPebBeingDebugged(ProcessId, false);
             specialPebFix = true;
         }
     }

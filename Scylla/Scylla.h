@@ -13,4 +13,6 @@ namespace scl
     void KillAntiAttach(DWORD pid);
 
     void InitHookDllData(HOOK_DLL_DATA *hdd, HANDLE hProcess, const Settings &settings);
+
+    bool SetPebBeingDebugged(DWORD pid, bool being_debugged);
 }

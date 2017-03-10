@@ -3,6 +3,8 @@
 #include "DllInject.h"
 #include "Logger.h"
 #include "NtApiLoader.h"
+#include "OsInfo.h"
+#include "Peb.h"
 #include "Util.h"
 
 extern scl::Logger g_log;
@@ -189,4 +191,33 @@ void scl::InitHookDllData(HOOK_DLL_DATA *hdd, HANDLE hProcess, const Settings &s
     hdd->isKernel32Hooked = FALSE;
     hdd->isNtdllHooked = FALSE;
     hdd->isUser32Hooked = FALSE;
+}
+
+bool scl::SetPebBeingDebugged(DWORD pid, bool being_debugged)
+{
+    // TODO: need logging?
+    Handle hProcess(OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, pid));
+    if (!hProcess.get())
+        return false;
+
+    auto peb = GetPeb(hProcess.get());
+    if (!peb)
+        return false;
+
+    peb->BeingDebugged = being_debugged ? TRUE : FALSE;
+    if (!scl::SetPeb(hProcess.get(), peb.get()))
+        return false;
+
+    if (IsWow64Process(hProcess.get()))
+    {
+        auto peb64 = scl::Wow64GetPeb64(hProcess.get());
+        if (!peb64)
+            return false;
+
+        peb->BeingDebugged = being_debugged ? TRUE : FALSE;
+        if (!scl::Wow64SetPeb64(hProcess.get(), peb64.get()))
+            return false;
+    }
+
+    return true;
 }
