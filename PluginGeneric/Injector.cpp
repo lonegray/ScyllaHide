@@ -19,13 +19,13 @@ typedef void(__cdecl * t_SetDebuggerBreakpoint)(DWORD_PTR address);
 t_SetDebuggerBreakpoint _SetDebuggerBreakpoint = 0;
 
 //anti-attach vars
-DWORD ExitThread_addr;
-BYTE* DbgUiIssueRemoteBreakin_addr;
-DWORD jmpback;
-DWORD DbgUiRemoteBreakin_addr;
-BYTE* RemoteBreakinPatch;
-BYTE code[8];
-HANDLE hDebuggee;
+static DWORD ExitThread_addr;
+static BYTE *DbgUiIssueRemoteBreakin_addr;
+static DWORD jmpback;
+static DWORD DbgUiRemoteBreakin_addr;
+static BYTE *RemoteBreakinPatch;
+static BYTE code[8];
+static HANDLE hDebuggee;
 
 #ifndef _WIN64
 void __declspec(naked) handleAntiAttach()
@@ -87,10 +87,127 @@ void InstallAntiAttachHook()
 #endif
 }
 
-bool StartHooking(HANDLE hProcess, HOOK_DLL_DATA *hdd, BYTE * dllMemory, DWORD_PTR imageBase)
+void ApplyPEBPatch(HANDLE hProcess, DWORD flags)
 {
-    hdd->dwProtectedProcessId = GetCurrentProcessId(); //for olly plugins
+    auto peb = scl::GetPeb(hProcess);
+    if (!peb) {
+        g_log.LogError(L"Failed to read PEB from remote process");
+    }
+    else
+    {
+        if (flags & PEB_PATCH_BeingDebugged)
+            peb->BeingDebugged = FALSE;
+        if (flags & PEB_PATCH_NtGlobalFlag)
+            peb->NtGlobalFlag &= ~0x70;
+
+        if (flags & PEB_PATCH_ProcessParameters) {
+            if (!scl::PebPatchProcessParameters(peb.get(), hProcess))
+                g_log.LogError(L"Failed to patch PEB!ProcessParameters");
+        }
+
+        if (flags & PEB_PATCH_HeapFlags)
+        {
+            if (!scl::PebPatchHeapFlags(peb.get(), hProcess))
+                g_log.LogError(L"Failed to patch flags in PEB!ProcessHeaps");
+        }
+
+        if (!scl::SetPeb(hProcess, peb.get()))
+            g_log.LogError(L"Failed to write PEB to remote process");
+
+    }
+
+#ifndef _WIN64
+    if (!scl::IsWow64Process(hProcess))
+        return;
+
+    auto peb64 = scl::Wow64GetPeb64(hProcess);
+    if (!peb64) {
+        g_log.LogError(L"Failed to read PEB64 from remote process");
+    }
+    else
+    {
+        if (flags & PEB_PATCH_BeingDebugged)
+            peb64->BeingDebugged = FALSE;
+        if (flags & PEB_PATCH_NtGlobalFlag)
+            peb64->NtGlobalFlag &= ~0x70;
+
+        if (flags & PEB_PATCH_ProcessParameters) {
+            if (!scl::Wow64Peb64PatchProcessParameters(peb64.get(), hProcess))
+                g_log.LogError(L"Failed to patch PEB64!ProcessParameters");
+        }
+
+        if (flags & PEB_PATCH_HeapFlags)
+        {
+            if (!scl::Wow64Peb64PatchHeapFlags(peb64.get(), hProcess))
+                g_log.LogError(L"Failed to patch flags in PEB64!ProcessHeaps");
+        }
+
+        if (!scl::Wow64SetPeb64(hProcess, peb64.get()))
+            g_log.LogError(L"Failed to write PEB64 to remote process");
+    }
+#endif
+}
+
+void startInjection(DWORD pid, HOOK_DLL_DATA *hdd, const wchar_t* dll_path, bool new_process)
+{
+    scl::Handle hProcess(OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, pid));
+    if (!hProcess.get())
+    {
+        g_log.LogError(L"Failed to open process PID %d: %s", pid, scl::FormatMessageW(GetLastError()).c_str());
+        return;
+    }
+
+    std::basic_string<BYTE> dll_mem;
+    if (!scl::ReadFileContents(dll_path, dll_mem))
+    {
+        g_log.LogError(L"Failed to read file %s: %s", dll_path, scl::FormatMessageW(GetLastError()).c_str());
+        return;
+    }
+
+    auto remote_hdd_rva = scl::GetDllFunctionAddressRva(dll_mem.data(), "HookDllData");
+    if (!remote_hdd_rva)
+    {
+        g_log.LogError(L"Failed to get RVA for %s!HookDllData", dll_path);
+        return;
+    }
+
+    if (new_process)
+    {
+        scl::InitHookDllData(hdd, hProcess.get(), g_settings);
+
+        if (g_settings.opts().removeDebugPrivileges)
+        {
+            if (!scl::RemoveDebugPrivileges(hProcess.get()))
+            {
+                g_log.LogError(L"Failed to remove debug privileges PID %d: %s", pid, scl::FormatMessageW(GetLastError()).c_str());
+            }
+        }
+
+        RestoreHooks(hdd, hProcess.get());
+
+        auto ret = scl::MapModuleToProcess(hProcess.get(), &dll_mem[0]);
+        if (!ret.first)
+        {
+            g_log.LogError(L"Failed to load %s into remote process: %s", dll_path, ret.second.c_str());
+        }
+        remoteImageBase = ret.first;
+
+        g_log.LogInfo(L"Hook Injection successful, Imagebase %p", remoteImageBase);
+    }
+
+    // For olly plugins
+    hdd->dwProtectedProcessId = GetCurrentProcessId();
     hdd->EnableProtectProcessId = TRUE;
+
+    if (!ApplyHook(hdd, hProcess.get(), &dll_mem[0], (DWORD_PTR)remoteImageBase))
+    {
+        g_log.LogError(L"Failed to apply hooks, sorry...");
+    }
+
+    if (!WriteProcessMemory(hProcess.get(), (LPVOID)((DWORD_PTR)remoteImageBase + remote_hdd_rva), hdd, sizeof(HOOK_DLL_DATA), 0))
+    {
+        g_log.LogError(L"Failed to write updated hook data into remote process: %s", scl::FormatMessageW(GetLastError()).c_str());
+    }
 
     DWORD peb_flags = 0;
     if (g_settings.opts().fixPebBeingDebugged) peb_flags |= PEB_PATCH_BeingDebugged;
@@ -98,76 +215,5 @@ bool StartHooking(HANDLE hProcess, HOOK_DLL_DATA *hdd, BYTE * dllMemory, DWORD_P
     if (g_settings.opts().fixPebNtGlobalFlag) peb_flags |= PEB_PATCH_NtGlobalFlag;
     if (g_settings.opts().fixPebStartupInfo) peb_flags |= PEB_PATCH_ProcessParameters;
 
-    ApplyPEBPatch(hProcess, peb_flags);
-
-    return ApplyHook(hdd, hProcess, dllMemory, imageBase);
+    ApplyPEBPatch(hProcess.get(), peb_flags);
 }
-
-void startInjectionProcess(HANDLE hProcess, HOOK_DLL_DATA *hdd, BYTE * dllMemory, bool newProcess)
-{
-    DWORD hookDllDataAddressRva = scl::GetDllFunctionAddressRva(dllMemory, "HookDllData");
-
-    if (newProcess == false)
-    {
-        //g_log.Log(L"Apply hooks again");
-        if (StartHooking(hProcess, hdd, dllMemory, (DWORD_PTR)remoteImageBase))
-        {
-            WriteProcessMemory(hProcess, (LPVOID)((DWORD_PTR)hookDllDataAddressRva + (DWORD_PTR)remoteImageBase), hdd, sizeof(HOOK_DLL_DATA), 0);
-        }
-    }
-    else
-    {
-        if (g_settings.opts().removeDebugPrivileges)
-        {
-            scl::RemoveDebugPrivileges(hProcess);
-        }
-
-        RestoreHooks(hdd, hProcess);
-
-        remoteImageBase = scl::MapModuleToProcess(hProcess, dllMemory).first;
-        if (remoteImageBase)
-        {
-            scl::InitHookDllData(hdd, hProcess, g_settings);
-
-
-            StartHooking(hProcess, hdd, dllMemory, (DWORD_PTR)remoteImageBase);
-
-            if (WriteProcessMemory(hProcess, (LPVOID)((DWORD_PTR)hookDllDataAddressRva + (DWORD_PTR)remoteImageBase), hdd, sizeof(HOOK_DLL_DATA), 0))
-            {
-                g_log.LogInfo(L"Hook Injection successful, Imagebase %p", remoteImageBase);
-            }
-            else
-            {
-                g_log.LogInfo(L"Failed to write hook dll data");
-            }
-        }
-        else
-        {
-            g_log.LogInfo(L"Failed to map image!");
-        }
-    }
-}
-
-void startInjection(DWORD targetPid, HOOK_DLL_DATA *hdd, const WCHAR * dllPath, bool newProcess)
-{
-    HANDLE hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, 0, targetPid);
-    if (hProcess)
-    {
-        std::basic_string<BYTE> dllMemory;
-        if (scl::ReadFileContents(dllPath, dllMemory))
-        {
-            startInjectionProcess(hProcess, hdd, &dllMemory[0], newProcess);
-        }
-        else
-        {
-            g_log.LogError(L"Cannot find %s", dllPath);
-        }
-        CloseHandle(hProcess);
-    }
-    else
-    {
-        g_log.LogError(L"Cannot open process handle %d", targetPid);
-    }
-}
-
-
