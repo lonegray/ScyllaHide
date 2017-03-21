@@ -1,7 +1,7 @@
 #include "HookHelper.h"
 
 #include <tlhelp32.h>
-#include <ntdllext/ntdllext.h>
+#include <ntdll/ntdll.h>
 #include <Scylla/Hook.h>
 
 #include "HookedFunctions.h"

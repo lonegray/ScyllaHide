@@ -21,9 +21,6 @@
     <ClCompile Include="HookedFunctions.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Hook.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DllMain.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -34,9 +31,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Hook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="HookedFunctions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
